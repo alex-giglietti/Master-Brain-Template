@@ -14,10 +14,13 @@ __pycache__/
 venv/
 *.egg-info/
 
-# Cache
-/memory/
+# Cache - ignore memory content but track structure
+template/memory/*
+!template/memory/README.md
+!template/memory/.gitkeep
 *.cache
 .cache/
+/tmp/
 
 # IDE
 .vscode/
@@ -35,3 +38,7 @@ Thumbs.db
 # Temporary files
 tmp/
 temp/
+
+# Google Drive sync artifacts
+*.gdoc
+*.gsheet

@@ -13,30 +13,31 @@ import pickle
 SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
 
 # Document ID mapping (from Drive structure)
+# Updated paths to reflect new template/ directory structure
 DOCUMENT_MAPPING = {
-    '1H_U_c_m5oPjUKkLPm3r3Zs7VFMjfoR3H-aX8R1SWwoI': 'config/vision.md',
-    '1oBRZR2pQ2hJ58z-OgW-SOZfBqE2YZp2rMoBIDSwpb2E': 'config/offers.md',
-    '1n057dUpH61oJZCchji_vyedESVxt1InU8VQfWP2uvxg': 'brand/brand.md',
-    '197IStPSln69vkXESX8N3Q70_SeTA540t-ZHaa5CB2-o': 'brand/social-bios.md',
-    '1f3OeXyQ2mcPI3T_3DGEhoFsXtBJcIx3x1emkVK14LtE': 'config/tech-stack.md',
-    '1FcoA4EirVNjy8ad7KKSYSehyg2p5-Fonx-iRW0h82E0': 'setup/api-connections.md',
-    '1CCu7kHo561Ju9CEHfr_XP_a8LPfTdRtwIhSJCSbE_Wo': 'setup/openclaw.md',
-    '1zjQAF7Ay2xGhjF6UFdvS_Z4hnAZG1ssTVrKzD8VxsDo': 'setup/telegram.md',
-    '1aXrfSEZVM5pc6A-6VEx2lQ-zXlIEX0OCGKMM1X35S64': 'setup/google-workspace.md',
-    '1adV2i6W35NKAeANHYyf68bJiZBssfXf0RHnr1Je05LQ': 'setup/ghl.md',
-    '1BvT7dd0ixxejWq_Wt6BewijmDWBJabY5cRE0XrZTOsY': 'setup/zapier.md',
-    '1DuGzbhcJyxE_596YJ-DXv6GFIfZI7axYsBwp2wpyF7E': 'execution/roles.md',
-    '1OQFDd6GRjajgMKdwzI3BzZDKj6cI1PhvXqyytmg7B98': 'execution/project-management.md',
-    '1ToQFQkJw4JhxIQkvDRp6CBW_kBOeC-EfmBLZfhTqdEQ': 'execution/financials.md',
-    '1f4r4rCiW6mfIzgINVDNWIkTOowstJqqit2rpozQF3wU': 'execution/reporting.md',
+    '1H_U_c_m5oPjUKkLPm3r3Zs7VFMjfoR3H-aX8R1SWwoI': 'template/config/vision.md',
+    '1oBRZR2pQ2hJ58z-OgW-SOZfBqE2YZp2rMoBIDSwpb2E': 'template/config/offers.md',
+    '1n057dUpH61oJZCchji_vyedESVxt1InU8VQfWP2uvxg': 'template/brand/brand.md',
+    '197IStPSln69vkXESX8N3Q70_SeTA540t-ZHaa5CB2-o': 'template/brand/social-bios.md',
+    '1f3OeXyQ2mcPI3T_3DGEhoFsXtBJcIx3x1emkVK14LtE': 'template/config/tech-stack.md',
+    '1FcoA4EirVNjy8ad7KKSYSehyg2p5-Fonx-iRW0h82E0': 'template/setup/api-connections.md',
+    '1CCu7kHo561Ju9CEHfr_XP_a8LPfTdRtwIhSJCSbE_Wo': 'template/setup/openclaw.md',
+    '1zjQAF7Ay2xGhjF6UFdvS_Z4hnAZG1ssTVrKzD8VxsDo': 'template/setup/telegram.md',
+    '1aXrfSEZVM5pc6A-6VEx2lQ-zXlIEX0OCGKMM1X35S64': 'template/setup/google-workspace.md',
+    '1adV2i6W35NKAeANHYyf68bJiZBssfXf0RHnr1Je05LQ': 'template/setup/ghl.md',
+    '1BvT7dd0ixxejWq_Wt6BewijmDWBJabY5cRE0XrZTOsY': 'template/setup/zapier.md',
+    '1DuGzbhcJyxE_596YJ-DXv6GFIfZI7axYsBwp2wpyF7E': 'template/execution/roles.md',
+    '1OQFDd6GRjajgMKdwzI3BzZDKj6cI1PhvXqyytmg7B98': 'template/execution/project-management.md',
+    '1ToQFQkJw4JhxIQkvDRp6CBW_kBOeC-EfmBLZfhTqdEQ': 'template/execution/financials.md',
+    '1f4r4rCiW6mfIzgINVDNWIkTOowstJqqit2rpozQF3wU': 'template/execution/reporting.md',
 }
 
 # Playbook folder IDs
 PLAYBOOK_FOLDERS = {
-    '1gURy-dDX9YRmmK0w86-XbKD_JfuMmw7q': 'playbooks/attract',
-    '1AbzNE1-uFVav55PMaEYw6Zvo3C01YKer': 'playbooks/convert',
-    '1xcB-iqE5ZP6LRda67E0QEEDU-s_S3uL2': 'playbooks/nurture',
-    '1r-WDhBCkN8MXQmsa0o-RZvlUSlSHerWH': 'playbooks/deliver',
+    '1gURy-dDX9YRmmK0w86-XbKD_JfuMmw7q': 'template/playbooks/attract',
+    '1AbzNE1-uFVav55PMaEYw6Zvo3C01YKer': 'template/playbooks/convert',
+    '1xcB-iqE5ZP6LRda67E0QEEDU-s_S3uL2': 'template/playbooks/nurture',
+    '1r-WDhBCkN8MXQmsa0o-RZvlUSlSHerWH': 'template/playbooks/deliver',
 }
 
 

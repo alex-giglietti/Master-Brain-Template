@@ -41,7 +41,7 @@ class GitHubBrain:
         Fetch a file from the GitHub brain repository
 
         Args:
-            file_path: Path to file in repo (e.g., "config/vision.md")
+            file_path: Path to file in repo (e.g., "template/config/vision.md")
             use_cache: Whether to use cached version if available
 
         Returns:
@@ -86,45 +86,45 @@ class GitHubBrain:
         Returns:
             Playbook contents as string
         """
-        file_path = f"playbooks/{stage}/{playbook_name}.md"
+        file_path = f"template/playbooks/{stage}/{playbook_name}.md"
         return self.fetch_file(file_path)
 
     def get_brand_voice(self) -> str:
         """Get brand voice guidelines"""
-        return self.fetch_file("brand/brand.md")
+        return self.fetch_file("template/brand/brand.md")
 
     def get_company_overview(self) -> str:
         """Get company vision and mission"""
-        return self.fetch_file("config/vision.md")
+        return self.fetch_file("template/config/vision.md")
 
     def get_offers(self) -> str:
         """Get product/service offerings"""
-        return self.fetch_file("config/offers.md")
+        return self.fetch_file("template/config/offers.md")
 
     def get_tech_stack(self) -> str:
         """Get technology stack information"""
-        return self.fetch_file("config/tech-stack.md")
+        return self.fetch_file("template/config/tech-stack.md")
 
     def get_social_bios(self) -> str:
         """Get social media bios"""
-        return self.fetch_file("brand/social-bios.md")
+        return self.fetch_file("template/brand/social-bios.md")
 
     def get_roles(self) -> str:
         """Get team roles and responsibilities"""
-        return self.fetch_file("execution/roles.md")
+        return self.fetch_file("template/execution/roles.md")
 
     def sync_all(self):
         """Pre-load all critical files into cache"""
         critical_files = [
-            "config/vision.md",
-            "config/offers.md",
-            "config/tech-stack.md",
-            "brand/brand.md",
-            "brand/social-bios.md",
-            "execution/roles.md",
-            "execution/project-management.md",
-            "execution/financials.md",
-            "execution/reporting.md",
+            "template/config/vision.md",
+            "template/config/offers.md",
+            "template/config/tech-stack.md",
+            "template/brand/brand.md",
+            "template/brand/social-bios.md",
+            "template/execution/roles.md",
+            "template/execution/project-management.md",
+            "template/execution/financials.md",
+            "template/execution/reporting.md",
         ]
 
         for file_path in critical_files:

@@ -1,159 +1,130 @@
-# AIM Master Brain Template
+# Master Brain Template System
 
-> **A centralized knowledge base system for AI-powered business automation bots**
+> **A fork-able, customizable knowledge base template for AI-powered business automation**
 
-## What is the Master Brain?
+## What Is This?
 
-The Master Brain is a GitHub-based knowledge repository that serves as the central "brain" for AI bots (specifically OpenClaw instances). It contains all the business logic, brand guidelines, operational procedures, and strategic playbooks that power intelligent automation agents.
-
-### Why GitHub Instead of Google Drive?
-
-1. **Version Control** - Track every change, roll back mistakes, see what improved performance
-2. **Easy API Access** - Bots can fetch knowledge via simple HTTP requests
-3. **Fork-able Templates** - Clients get their own copy without touching the original
-4. **Collaborative** - Multiple team members can update safely with pull requests
-5. **Always Available** - No authentication issues or permission problems for bots
+This is a **master template repository** that serves as the foundation for creating custom AI bot "brains." Each client gets their own fork of this template, which they customize with their business-specific information.
 
 ## Repository Structure
 
-### `/config/` - Core Business Configuration
-- `vision.md` - Company overview, mission, values, and strategic direction
-- `offers.md` - Product/service catalog with pricing and positioning
-- `tech-stack.md` - Technology infrastructure and integrations
+### `/_master/` - **DO NOT EDIT** (Maintained by AI implementation team)
+Contains core system files that power the brain across all clients:
+- **docs/** - System architecture, best practices, API reference
+- **scripts/** - Integration scripts, validation tools, deployment automation
+- **templates/** - Blank templates for creating new documents
 
-### `/brand/` - Brand Identity & Assets
-- `brand.md` - Brand guidelines, voice, tone, messaging framework
-- `social-bios.md` - Pre-written bios for all social platforms
-- `assets/` - Logos, favicons, business cards, banners (all visual brand elements)
+### `/template/` - **CUSTOMIZE THIS** (Client-specific content)
+Contains the actual "brain" that clients customize:
+- **config/** - Company vision, offers, tech stack
+- **brand/** - Brand guidelines, social bios, visual assets
+- **playbooks/** - Customer journey automation (attract, convert, nurture, deliver)
+- **execution/** - Operations, project management, financials
+- **setup/** - Integration guides for tools and platforms
+- **memory/** - Dynamic conversation history (not in git)
 
-### `/playbooks/` - Customer Journey Automation
-Organized by funnel stage:
-- `attract/` - Lead generation, outreach, first contact procedures
-- `convert/` - Sales qualification, objection handling, closing strategies
-- `nurture/` - Follow-up sequences, relationship building, retention
-- `deliver/` - Onboarding, service delivery, customer success protocols
-
-### `/execution/` - Operations & Management
-- `roles.md` - Team roles, responsibilities, and reporting structure
-- `project-management.md` - Project workflows, milestone tracking, sprint planning
-- `financials.md` - Budgets, pricing calculations, revenue tracking
-- `reporting.md` - KPIs, dashboards, and reporting procedures
-
-### `/setup/` - Technical Integration Guides
-Step-by-step setup instructions for:
-- `openclaw.md` - OpenClaw bot deployment and configuration
-- `telegram.md` - Telegram bot integration
-- `google-workspace.md` - Google Workspace automation
-- `ghl.md` - GoHighLevel CRM setup
-- `zapier.md` - Zapier workflow connections
-- `api-connections.md` - API credentials and webhook configurations
-
-### `/memory/` - Dynamic Conversation History
-- Real-time storage for bot conversations and learned preferences
-- Not committed to git (in .gitignore) - stored in separate database
-- Can be synced back to GitHub for analysis/backup
+### `/examples/` - **REFERENCE ONLY** (Sample completed brains)
+Real-world examples of fully customized brains for different business types
 
 ## Quick Start for Clients
 
-### 1. Fork This Repository
+### Step 1: Fork This Repository
 ```bash
-# Via GitHub UI: Click "Fork" button
-# Or via CLI:
-gh repo fork aim-master-brain-template --clone
+gh repo fork master-brain-template --clone
+cd master-brain-template
 ```
 
-### 2. Customize Your Brain
-- Update `config/vision.md` with your company info
-- Replace `brand/` assets with your logos and colors
-- Modify `playbooks/` to match your sales process
-- Configure `setup/api-connections.md` with your API keys
+### Step 2: Customize Your Brain
+Navigate to `/template/` and update all `[TEMPLATE]` files with your business info:
+- `template/config/vision.md` - Your company overview
+- `template/brand/brand.md` - Your brand guidelines
+- `template/playbooks/` - Your customer journey scripts
+- See [TEMPLATE-CUSTOMIZATION-GUIDE.md](TEMPLATE-CUSTOMIZATION-GUIDE.md) for detailed instructions
 
-### 3. Connect to Your Bot
-See [SETUP-GUIDE.md](SETUP-GUIDE.md) for detailed integration instructions.
+### Step 3: Deploy to Your Bot
+Follow [SETUP-GUIDE.md](SETUP-GUIDE.md) to connect your customized brain to OpenClaw
 
-## How Bots Use This Brain
+## For AI Implementation Teams
 
-Your OpenClaw bot (or any AI agent) reads from this repository in real-time:
+### Updating the Master Template
+When you improve the core system (scripts, docs, templates):
+1. Update files in `/_master/` on this repo
+2. All client forks can pull these improvements without affecting their customized `/template/` content
 
-```python
-import requests
-
-# Fetch a playbook
-def get_playbook(repo_url, playbook_path):
-    url = f"{repo_url}/main/{playbook_path}"
-    response = requests.get(url)
-    return response.text
-
-# Example: Load sales objection handling
-objections = get_playbook(
-    "https://raw.githubusercontent.com/yourname/your-brain",
-    "playbooks/convert/objection-handling.md"
-)
+### Creating a New Client Brain
+```bash
+# Use the automated setup script
+bash _master/scripts/setup-client-brain.sh "ClientName"
 ```
 
-The bot uses this knowledge to:
-- Answer customer questions accurately
-- Follow your specific sales scripts
-- Apply your brand voice consistently
-- Execute procedures exactly as documented
-- Make decisions based on your strategic guidelines
+This will:
+- Create a new fork
+- Add client name to all template files
+- Initialize their customized structure
+- Generate deployment credentials
+
+## Documentation
+
+- **[SETUP-GUIDE.md](SETUP-GUIDE.md)** - Connect brain to OpenClaw
+- **[TEMPLATE-CUSTOMIZATION-GUIDE.md](TEMPLATE-CUSTOMIZATION-GUIDE.md)** - Customize template files
+- **[_master/docs/architecture.md](_master/docs/architecture.md)** - How the brain system works
+- **[_master/docs/best-practices.md](_master/docs/best-practices.md)** - Maintenance and optimization
+- **[_master/docs/api-reference.md](_master/docs/api-reference.md)** - Programmatic access patterns
+- **[_master/docs/troubleshooting.md](_master/docs/troubleshooting.md)** - Common issues and solutions
+
+## Philosophy
+
+### Template vs. Instance
+- **This repo** = The template (like a blank form)
+- **Client fork** = An instance (like a filled-out form)
+
+### Master vs. Client Separation
+- **`/_master/`** stays in sync across all forks (pull updates)
+- **`/template/`** is unique per client (never pushed back to master)
+
+### Why This Structure?
+- **Scalability**: Onboard 10 clients or 1000 with the same system
+- **Maintainability**: Fix a bug once, deploy to all clients
+- **Customization**: Each client gets a unique brain without code duplication
+- **Version Control**: Track template improvements separately from client customizations
 
 ## Keeping Your Brain Updated
 
-### For Done-For-You Clients
-Your AI implementation partner maintains your brain. They update playbooks based on performance data and evolving strategies.
-
-### For Done-With-You Clients
-You can update files directly:
-1. Edit markdown files in GitHub web interface or locally
-2. Commit changes with descriptive messages
-3. Bot automatically pulls latest version within 5 minutes
-
-### Version Control Best Practices
-- Use clear commit messages: "Updated lead qualification criteria"
-- Test changes in a staging bot before production
-- Create branches for major rewrites
-- Tag releases for rollback capability
-
-## Advanced Features
-
-### A/B Testing Playbooks
-Create branches to test different approaches:
+### As a Client
 ```bash
-git checkout -b test-aggressive-sales-script
-# Edit playbooks/convert/sales-script.md
-git commit -m "Testing more aggressive close"
+# Pull master template improvements (doesn't touch your /template/ content)
+git fetch upstream
+git merge upstream/main _master/
 ```
-Point one bot instance to `main` branch, another to `test-aggressive-sales-script`, compare results.
 
-### Multi-Bot Architecture
-Different bots can read different sections:
-- **Sales Bot** - Reads only `/playbooks/convert/`
-- **Support Bot** - Reads only `/playbooks/deliver/`
-- **Marketing Bot** - Reads only `/playbooks/attract/`
+### As an Implementation Team
+```bash
+# Push improvements to master template
+git checkout main
+# Edit files in _master/
+git add _master/
+git commit -m "Improved brain loader caching"
+git push origin main
+```
 
-All sharing the same `/brand/` and `/config/` for consistency.
+All clients can now pull this improvement.
 
-### RAG Integration
-Use this repository as your vector store source:
-1. Clone the repo
-2. Chunk all markdown files
-3. Generate embeddings
-4. Store in Pinecone/Qdrant/Weaviate
-5. Bot queries vector store for semantic search
+## Examples
+
+Check `/examples/` to see fully-completed brains for:
+- **Consulting Firm** - B2B professional services
+- **E-commerce Store** - D2C product business
+
+These show what a production-ready brain looks like.
 
 ## Support
 
-For implementation help:
-- **Technical Issues**: Open an issue in this repository
-- **Strategic Guidance**: Contact your AI implementation partner
-- **Documentation**: See [SETUP-GUIDE.md](SETUP-GUIDE.md)
-
-## License
-
-Proprietary - Licensed to [CLIENT NAME]
-Unauthorized copying or distribution prohibited.
+- **For Clients**: See your implementation partner's contact info in your customized README
+- **For Implementation Teams**: Open issues in this repository
+- **Documentation**: All guides are in `/_master/docs/`
 
 ---
 
-**Built by AIM** | Powered by AI | Maintained by Humans
+**System Version:** 1.0
+**Last Updated:** February 2026
+**Maintained By:** AIM

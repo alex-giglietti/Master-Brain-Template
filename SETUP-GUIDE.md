@@ -6,12 +6,10 @@
 
 Before starting, ensure you have:
 - [ ] Forked the `aim-master-brain-template` repository to your GitHub account
-- [ ] OpenClaw bot deployed and running (see `setup/openclaw.md`)
+- [ ] OpenClaw bot deployed and running (see `template/setup/openclaw.md`)
 - [ ] GitHub Personal Access Token (PAT) with `repo` scope
 - [ ] Terminal/SSH access to your OpenClaw server
 - [ ] Basic familiarity with docker and environment variables
-
-**Time Required:** 30-45 minutes
 
 ---
 
@@ -24,18 +22,18 @@ Before starting, ensure you have:
 4. Wait for fork to complete (~30 seconds)
 
 ### Step 1.2: Customize Your Fork
-1. In your forked repo, click on `config/vision.md`
+1. In your forked repo, click on `template/config/vision.md`
 2. Click the pencil icon (Edit this file)
 3. Replace the template content with your actual company information
 4. Scroll down and click "Commit changes"
-5. Repeat for all files in `/config/`, `/brand/`, and `/playbooks/`
+5. Repeat for all files in `/template/config/`, `/template/brand/`, and `/template/playbooks/`
 
 **Pro Tip:** You can bulk edit locally by cloning:
 ```bash
 git clone https://github.com/YOUR_USERNAME/aim-master-brain-template.git
 cd aim-master-brain-template
-# Edit files with your preferred text editor
-git add .
+# Edit files in template/ with your preferred text editor
+git add template/
 git commit -m "Customized brain for [Your Company]"
 git push origin main
 ```
@@ -87,9 +85,9 @@ Save and exit:
 - **Vim:** Press `Esc`, type `:wq`, press `Enter`
 
 ### Step 2.3: Install the Brain Loader
-Copy the `scripts/brain_loader.py` file to your OpenClaw installation directory:
+Copy the `_master/scripts/brain_loader.py` file to your OpenClaw installation directory:
 ```bash
-cp scripts/brain_loader.py /opt/openclaw/brain_loader.py
+cp _master/scripts/brain_loader.py /opt/openclaw/brain_loader.py
 ```
 
 ### Step 2.4: Integrate Brain Loader into OpenClaw
@@ -100,6 +98,8 @@ nano agent_config.py  # or wherever your agent is configured
 
 Add this import at the top:
 ```python
+import sys
+sys.path.append('_master/scripts')
 from brain_loader import brain
 ```
 
@@ -143,9 +143,9 @@ sudo journalctl -u openclaw -n 50
 
 You should see log messages like:
 ```
-INFO:brain_loader:Fetched and cached config/vision.md
-INFO:brain_loader:Fetched and cached brand/brand.md
-INFO:brain_loader:Using cached version of config/offers.md
+INFO:brain_loader:Fetched and cached template/config/vision.md
+INFO:brain_loader:Fetched and cached template/brand/brand.md
+INFO:brain_loader:Using cached version of template/config/offers.md
 ```
 
 ---
@@ -172,7 +172,7 @@ Send a test message to your bot (via Telegram/web interface):
 "Tell me about your company"
 ```
 
-The bot should respond with information from your `config/vision.md` file.
+The bot should respond with information from your `template/config/vision.md` file.
 
 ### Step 3.3: Test Playbook Usage
 Send a sales-related query:
@@ -180,7 +180,7 @@ Send a sales-related query:
 "I'm interested in your services, what do you offer?"
 ```
 
-The bot should use content from `config/offers.md` and potentially `playbooks/convert/`.
+The bot should use content from `template/config/offers.md` and potentially `template/playbooks/convert/`.
 
 ---
 
@@ -219,7 +219,7 @@ This runs every day at 9 AM and logs results to `/var/log/brain_sync.log`.
 **Problem: "Failed to fetch" errors in logs**
 - Verify GitHub token is correct in .env
 - Check repository is public OR token has `repo` scope
-- Test manually: `curl -H "Authorization: token YOUR_TOKEN" https://raw.githubusercontent.com/YOUR_USERNAME/aim-master-brain-template/main/config/vision.md`
+- Test manually: `curl -H "Authorization: token YOUR_TOKEN" https://raw.githubusercontent.com/YOUR_USERNAME/aim-master-brain-template/main/template/config/vision.md`
 
 **Problem: Bot uses outdated information**
 - Clear cache: `rm -rf /tmp/openclaw_brain/*`
@@ -230,6 +230,8 @@ This runs every day at 9 AM and logs results to `/var/log/brain_sync.log`.
 - GitHub allows 5,000 API requests/hour with authentication
 - Check you're using token (unauthenticated is only 60/hour)
 - Increase `BRAIN_SYNC_INTERVAL` if making too many requests
+
+For more troubleshooting help, see [_master/docs/troubleshooting.md](_master/docs/troubleshooting.md).
 
 ---
 
@@ -261,7 +263,7 @@ onboarding = brain.fetch_playbook("deliver", "onboarding")
 troubleshooting = brain.fetch_playbook("deliver", "troubleshooting")
 ```
 
-All bots share the same `/brand/` and `/config/` for consistency.
+All bots share the same `/template/brand/` and `/template/config/` for consistency.
 
 ### 5.3: RAG Integration (Advanced)
 To use the brain with vector search:
@@ -306,8 +308,8 @@ results = vectorstore.similarity_search(query, k=3)
 When delivering to a client, ensure:
 - [ ] GitHub repository forked to client's account (or your agency account for DFY)
 - [ ] All placeholder content replaced with client's actual info
-- [ ] Brand assets uploaded to `/brand/assets/`
-- [ ] API connections documented in `/setup/api-connections.md`
+- [ ] Brand assets uploaded to `/template/brand/assets/`
+- [ ] API connections documented in `/template/setup/api-connections.md`
 - [ ] Client has GitHub PAT saved securely
 - [ ] OpenClaw `.env` file configured correctly
 - [ ] Brain successfully loading (test with Part 3 steps)
