@@ -1,0 +1,11 @@
+{
+  "version": "1.0.0",
+  "name": "AIM Master Brain",
+  "description": "AI Implementation Mastermind — Master Brain Template for OpenClaw",
+  "author": "AIM",
+  "changelog": "Initial release with brain sync system",
+  "protected_dirs": ["memory", "brand", "vision"],
+  "protected_files": ["USER.md", "IDENTITY.md"],
+  "update_url": "https://github.com/alex-giglietti/Master-Brain-Template",
+  "notes": "Protected dirs are only seeded on first install. Once a client has customized their brand/vision/memory, updates will never overwrite them."
+}
