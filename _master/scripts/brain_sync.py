@@ -5,6 +5,9 @@ AIM Brain Sync — Keeps OpenClaw workspace in sync with the Master Brain repo.
 Protected folders (memory, brand, vision) are ONLY seeded on first install,
 NEVER overwritten. Everything else gets updated.
 
+Encrypted folders require a valid BRAIN_KEY to decrypt. Without it, premium
+content will not be available. Contact AIM for your license key.
+
 Usage:
     python brain_sync.py                    # Sync with defaults
     python brain_sync.py --check            # Check for updates without applying
@@ -22,10 +25,12 @@ import shutil
 import subprocess
 import sys
 import hashlib
+import tarfile
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-# ─── DEFAULTS ───────────────────────────────────────────────────────────────────
+# ─── DEFAULTS ────────────────────────────────────────────────────────────────────
 DEFAULT_REPO = "alex-giglietti/Master-Brain-Template"
 DEFAULT_BRANCH = "main"
 DEFAULT_WORKSPACE = Path.home() / ".openclaw" / "workspace"
@@ -36,8 +41,10 @@ PROTECTED_FILES = {"USER.md", "IDENTITY.md"}
 MANIFEST_FILE = "manifest.json"
 VERSION_FILE = ".brain_version"
 SYNC_LOG = ".brain_sync_log"
+ENCRYPTED_DIR = "encrypted"
+BRAIN_EXT = ".brain"
 
-# ─── COLORS ─────────────────────────────────────────────────────────────────────
+# ─── COLORS ──────────────────────────────────────────────────────────────────────
 class C:
     GREEN = "\033[92m"; YELLOW = "\033[93m"; RED = "\033[91m"
     BLUE = "\033[94m"; CYAN = "\033[96m"; BOLD = "\033[1m"
@@ -51,7 +58,7 @@ def header(msg):
     print(f"  {C.BOLD}🧠 {msg}{C.RESET}")
     print(f"{C.BOLD}{C.CYAN}{'─' * 60}{C.RESET}\n")
 
-# ─── HELPERS ────────────────────────────────────────────────────────────────────
+# ─── HELPERS ─────────────────────────────────────────────────────────────────────
 def git_clone(repo_url, branch, dest):
     result = subprocess.run(
         ["git", "clone", "--depth", "1", "--branch", branch, repo_url, str(dest)],
@@ -110,9 +117,62 @@ def load_manifest(path):
     mf = path / MANIFEST_FILE
     return json.loads(mf.read_text()) if mf.exists() else {}
 
-# ─── SYNC ENGINE ────────────────────────────────────────────────────────────────
-def sync_brain(repo, branch, workspace, force=False, fresh=False, check_only=False, token=None):
-    import tempfile
+# ─── DECRYPTION ──────────────────────────────────────────────────────────────────
+def check_openssl():
+    """Verify openssl is available."""
+    try:
+        subprocess.run(["openssl", "version"], capture_output=True, check=True)
+        return True
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return False
+
+def decrypt_file(input_path, output_path, key):
+    """Decrypt a .brain file using AES-256-CBC via openssl."""
+    result = subprocess.run(
+        ["openssl", "enc", "-d", "-aes-256-cbc", "-pbkdf2", "-iter", "100000",
+         "-in", str(input_path), "-out", str(output_path), "-pass", f"pass:{key}"],
+        capture_output=True, text=True
+    )
+    if result.returncode != 0:
+        raise RuntimeError("Decryption failed — invalid BRAIN_KEY or corrupted archive")
+
+def decrypt_brain_archives(temp_dir, encrypted_dirs, brain_key):
+    """Decrypt all .brain archives in the encrypted/ folder into temp_dir.
+
+    After this, temp_dir will contain the plaintext directories alongside
+    everything else, so the normal sync loop can process them.
+    """
+    enc_dir = temp_dir / ENCRYPTED_DIR
+    if not enc_dir.exists():
+        raise RuntimeError(f"encrypted/ directory not found in repo")
+
+    decrypted = []
+    for dir_name in sorted(encrypted_dirs):
+        brain_file = enc_dir / f"{dir_name}{BRAIN_EXT}"
+        if not brain_file.exists():
+            log("⚠️", f"{dir_name}{BRAIN_EXT} — not found in encrypted/, skipping", C.YELLOW)
+            continue
+
+        log("🔓", f"{dir_name}/ — decrypting...", C.BLUE)
+
+        with tempfile.NamedTemporaryFile(suffix=".tar.gz", delete=False) as tmp:
+            tmp_archive = tmp.name
+
+        try:
+            decrypt_file(brain_file, tmp_archive, brain_key)
+            with tarfile.open(tmp_archive, "r:gz") as tar:
+                tar.extractall(path=temp_dir)
+            log("✅", f"{dir_name}/ — decrypted", C.GREEN)
+            decrypted.append(dir_name)
+        finally:
+            if os.path.exists(tmp_archive):
+                os.unlink(tmp_archive)
+
+    return decrypted
+
+# ─── SYNC ENGINE ─────────────────────────────────────────────────────────────────
+def sync_brain(repo, branch, workspace, force=False, fresh=False,
+               check_only=False, token=None, brain_key=None):
 
     workspace = Path(workspace)
     repo_url = f"https://{token + '@' if token else ''}github.com/{repo}.git"
@@ -123,7 +183,8 @@ def sync_brain(repo, branch, workspace, force=False, fresh=False, check_only=Fal
     header("AIM Brain Sync")
     log("📍", f"Workspace: {workspace}")
     log("📦", f"Repo: {repo} ({branch})")
-    log("📌", f"Installed: v{installed_ver or 'none'}" + (f" ({installed_at[:10]})" if installed_at else ""))
+    log("📌", f"Installed: v{installed_ver or 'none'}" +
+        (f" ({installed_at[:10]})" if installed_at else ""))
 
     if is_first_install:
         log("🆕", "First install detected — full setup", C.GREEN)
@@ -149,6 +210,7 @@ def sync_brain(repo, branch, workspace, force=False, fresh=False, check_only=Fal
         remote_ver = manifest.get("version", "unknown")
         protected_dirs = set(manifest.get("protected_dirs", PROTECTED_DIRS))
         protected_files = set(manifest.get("protected_files", PROTECTED_FILES))
+        encrypted_dirs = set(manifest.get("encrypted_dirs", []))
         changelog = manifest.get("changelog", "")
 
         if not force and not fresh and installed_ver == remote_ver:
@@ -160,6 +222,38 @@ def sync_brain(repo, branch, workspace, force=False, fresh=False, check_only=Fal
             f"{action_word}: v{installed_ver or 'none'} → v{remote_ver}",
             C.YELLOW if not is_first_install else C.GREEN)
 
+        # ─── Handle encrypted content ───────────────────────────────────
+        has_encrypted = bool(encrypted_dirs) and (temp_dir / ENCRYPTED_DIR).exists()
+        decrypted_dirs = []
+
+        if has_encrypted:
+            if not brain_key:
+                print()
+                log("🔒", "This brain contains encrypted premium content.", C.RED)
+                log("❌", "BRAIN_KEY is required but not set.", C.RED)
+                print()
+                log("💡", "Set your key:  export BRAIN_KEY=\"your-key-here\"", C.YELLOW)
+                log("💡", "Or in .env:    BRAIN_KEY=your-key-here", C.YELLOW)
+                log("💡", "Contact AIM to get your license key.", C.YELLOW)
+                print()
+                raise RuntimeError("Missing BRAIN_KEY — cannot decrypt premium content")
+
+            if not check_openssl():
+                raise RuntimeError("openssl is required for decryption but was not found")
+
+            log("🔐", f"Decrypting {len(encrypted_dirs)} premium modules...", C.CYAN)
+            print()
+
+            try:
+                decrypted_dirs = decrypt_brain_archives(temp_dir, encrypted_dirs, brain_key)
+            except RuntimeError:
+                print()
+                log("❌", "Decryption failed — your BRAIN_KEY is invalid.", C.RED)
+                log("💡", "Double-check your key or contact AIM for a valid license.", C.YELLOW)
+                print()
+                raise RuntimeError("Invalid BRAIN_KEY — decryption failed")
+
+        # ─── Create workspace ───────────────────────────────────────────
         workspace.mkdir(parents=True, exist_ok=True)
 
         # Detect template/ vs flat structure
@@ -167,7 +261,8 @@ def sync_brain(repo, branch, workspace, force=False, fresh=False, check_only=Fal
         source_dir = template_dir if template_dir.exists() else temp_dir
 
         skip_names = {MANIFEST_FILE, "README.md", "LICENSE", ".gitignore",
-                     ".env.example", "update.sh", "update.py", "brain_sync.py"}
+                     ".env.example", "update.sh", "update.py", "brain_sync.py",
+                     ENCRYPTED_DIR}
 
         updated, skipped, installed = [], [], []
         print()
@@ -227,11 +322,14 @@ def sync_brain(repo, branch, workspace, force=False, fresh=False, check_only=Fal
         save_version(workspace, remote_ver, repo)
         action = "fresh_install" if fresh else ("first_install" if is_first_install else "update")
         append_sync_log(workspace, remote_ver, action,
-                       f"updated={updated}, skipped={skipped}, installed={installed}")
+                       f"updated={updated}, skipped={skipped}, installed={installed}, "
+                       f"decrypted={decrypted_dirs}")
 
         print()
         header("Sync Complete")
         log("✅", f"Brain version: v{remote_ver}", C.GREEN)
+        if decrypted_dirs:
+            log("🔐", f"Premium content: {len(decrypted_dirs)} modules decrypted", C.GREEN)
         if changelog: log("📝", f"What's new: {changelog}")
         if updated: log("🔄", f"Updated: {', '.join(updated)}")
         if installed: log("🌱", f"Seeded: {', '.join(installed)}")
@@ -241,7 +339,7 @@ def sync_brain(repo, branch, workspace, force=False, fresh=False, check_only=Fal
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
 
-# ─── CLI ────────────────────────────────────────────────────────────────────────
+# ─── CLI ─────────────────────────────────────────────────────────────────────────
 def main():
     parser = argparse.ArgumentParser(description="🧠 AIM Brain Sync")
     parser.add_argument("--repo", default=os.environ.get("BRAIN_REPO", DEFAULT_REPO))
@@ -252,6 +350,8 @@ def main():
     parser.add_argument("--force", action="store_true", help="Force re-sync (still protects folders)")
     parser.add_argument("--fresh", action="store_true", help="Full reinstall — overwrites EVERYTHING")
     parser.add_argument("--token", default=os.environ.get("GITHUB_TOKEN"))
+    parser.add_argument("--key", default=os.environ.get("BRAIN_KEY"),
+                       help="Decryption key for premium content (or set BRAIN_KEY env var)")
 
     args = parser.parse_args()
 
@@ -263,7 +363,8 @@ def main():
 
     try:
         sync_brain(repo=args.repo, branch=args.branch, workspace=args.workspace,
-                  force=args.force, fresh=args.fresh, check_only=args.check, token=args.token)
+                  force=args.force, fresh=args.fresh, check_only=args.check,
+                  token=args.token, brain_key=args.key)
     except Exception as e:
         log("❌", f"Sync failed: {e}", C.RED)
         sys.exit(1)

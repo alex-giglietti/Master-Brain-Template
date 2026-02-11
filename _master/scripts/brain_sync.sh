@@ -6,9 +6,12 @@ REPO="${BRAIN_REPO:-alex-giglietti/Master-Brain-Template}"
 BRANCH="${BRAIN_BRANCH:-main}"
 WORKSPACE="${OPENCLAW_WORKSPACE:-$HOME/.openclaw/workspace}"
 TOKEN="${GITHUB_TOKEN:-}"
+BRAIN_KEY="${BRAIN_KEY:-}"
 
 PROTECTED_DIRS=("memory" "brand" "vision")
 PROTECTED_FILES=("USER.md" "IDENTITY.md")
+ENCRYPTED_DIR="encrypted"
+BRAIN_EXT=".brain"
 
 # ─── PARSE ARGS ───────────────────────────────────────────────────────
 CHECK_ONLY=false; FORCE=false; FRESH=false
@@ -21,6 +24,7 @@ while [[ $# -gt 0 ]]; do
         --repo)      REPO="$2"; shift 2 ;;
         --branch)    BRANCH="$2"; shift 2 ;;
         --token)     TOKEN="$2"; shift 2 ;;
+        --key)       BRAIN_KEY="$2"; shift 2 ;;
         *)           echo "Unknown: $1"; exit 1 ;;
     esac
 done
@@ -67,6 +71,50 @@ RV="unknown"; CL=""
 ! $FORCE && ! $FRESH && [[ "$INSTALLED_VER" == "$RV" ]] && { log "✅" "${GREEN}Already up to date (v${RV})${RESET}"; exit 0; }
 $IS_FIRST && log "📥" "${GREEN}Installing v${RV}${RESET}" || log "🔄" "${YELLOW}Updating: v${INSTALLED_VER:-none} → v${RV}${RESET}"
 
+# ─── Handle encrypted content ─────────────────────────────────────────
+ENCRYPTED_DIRS_LIST=$(python3 -c "import json;m=json.load(open('$TEMP/manifest.json'));print(' '.join(m.get('encrypted_dirs',[])))" 2>/dev/null || echo "")
+HAS_ENCRYPTED=false
+[[ -n "$ENCRYPTED_DIRS_LIST" && -d "$TEMP/$ENCRYPTED_DIR" ]] && HAS_ENCRYPTED=true
+
+if $HAS_ENCRYPTED; then
+    if [[ -z "$BRAIN_KEY" ]]; then
+        echo ""
+        log "🔒" "${RED}This brain contains encrypted premium content.${RESET}"
+        log "❌" "${RED}BRAIN_KEY is required but not set.${RESET}"
+        echo ""
+        log "💡" "${YELLOW}Set your key:  export BRAIN_KEY=\"your-key-here\"${RESET}"
+        log "💡" "${YELLOW}Or in .env:    BRAIN_KEY=your-key-here${RESET}"
+        log "💡" "${YELLOW}Contact AIM to get your license key.${RESET}"
+        echo ""
+        exit 1
+    fi
+
+    if ! command -v openssl &>/dev/null; then
+        log "❌" "${RED}openssl is required for decryption but was not found${RESET}"
+        exit 1
+    fi
+
+    log "🔐" "${CYAN}Decrypting premium modules...${RESET}"
+    for dir_name in $ENCRYPTED_DIRS_LIST; do
+        brain_file="$TEMP/$ENCRYPTED_DIR/${dir_name}${BRAIN_EXT}"
+        [[ ! -f "$brain_file" ]] && { log "⚠️" "${YELLOW}${dir_name}${BRAIN_EXT} — not found, skipping${RESET}"; continue; }
+
+        tmp_archive=$(mktemp --suffix=.tar.gz)
+        log "🔓" "${BLUE}${dir_name}/ — decrypting...${RESET}"
+        if ! openssl enc -d -aes-256-cbc -pbkdf2 -iter 100000 -in "$brain_file" -out "$tmp_archive" -pass "pass:$BRAIN_KEY" 2>/dev/null; then
+            log "❌" "${RED}Decryption failed — your BRAIN_KEY is invalid.${RESET}"
+            log "💡" "${YELLOW}Double-check your key or contact AIM for a valid license.${RESET}"
+            rm -f "$tmp_archive"
+            exit 1
+        fi
+
+        log "✅" "${GREEN}${dir_name}/ — decrypted${RESET}"
+        tar xzf "$tmp_archive" -C "$TEMP"
+        rm -f "$tmp_archive"
+    done
+    echo ""
+fi
+
 mkdir -p "$WORKSPACE"
 SRC="$TEMP"; [[ -d "$TEMP/template" ]] && SRC="$TEMP/template"
 echo ""
@@ -74,7 +122,7 @@ echo ""
 UPD=(); SKP=(); SDD=()
 for item in "$SRC"/*; do
     [[ ! -e "$item" ]] && continue; name=$(basename "$item"); dest="$WORKSPACE/$name"
-    case "$name" in .*|manifest.json|README.md|LICENSE|.gitignore|.env.example|update.sh|update.py|brain_sync.py) continue ;; esac
+    case "$name" in .*|manifest.json|README.md|LICENSE|.gitignore|.env.example|update.sh|update.py|brain_sync.py|encrypted) continue ;; esac
 
     if [[ -d "$item" ]] && is_protected_dir "$name"; then
         [[ -d "$dest" ]] && ! $FRESH && { log "🔒" "$name/ — protected"; SKP+=("$name"); } || { log "🌱" "${GREEN}$name/ — seeding${RESET}"; [[ -d "$dest" ]] && rm -rf "$dest"; cp -r "$item" "$dest"; SDD+=("$name"); }; continue; fi
@@ -90,6 +138,7 @@ done
 save_ver "$RV"
 echo ""; hdr "Sync Complete"
 log "✅" "${GREEN}Brain v${RV}${RESET}"
+$HAS_ENCRYPTED && log "🔐" "${GREEN}Premium content decrypted${RESET}"
 [[ -n "$CL" ]] && log "📝" "What's new: $CL"
 [[ ${#UPD[@]} -gt 0 ]] && log "🔄" "Updated: $(IFS=', '; echo "${UPD[*]}")"
 [[ ${#SDD[@]} -gt 0 ]] && log "🌱" "Seeded: $(IFS=', '; echo "${SDD[*]}")"

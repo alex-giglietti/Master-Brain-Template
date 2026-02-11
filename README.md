@@ -53,22 +53,64 @@ Step-by-step setup instructions for:
 - Not committed to git (in .gitignore) - stored in separate database
 - Can be synced back to GitHub for analysis/backup
 
-## Quick Start for Clients
+## Content Protection
 
-### 1. Fork This Repository
+Premium brain content (playbooks, SOPs, config, integration guides) is **encrypted at rest** in this repository. Only licensed clients with a valid `BRAIN_KEY` can decrypt and use this content.
+
+### How It Works
+
+1. **AIM encrypts** premium directories into `.brain` archives (AES-256-CBC) before pushing to GitHub
+2. **GitHub stores** only encrypted blobs — plaintext IP never touches the repo
+3. **Clients sync** using `brain_sync.py`, which automatically decrypts with their `BRAIN_KEY`
+4. **No key = no content** — the sync script will refuse to proceed without a valid key
+
+### What's Encrypted vs Open
+
+| Encrypted (requires BRAIN_KEY) | Open (always readable) |
+|---|---|
+| `playbooks/` — sales scripts & SOPs | `brand/` — client's brand (customizable) |
+| `config/` — offers, tech stack | `vision/` — client's vision (customizable) |
+| `execution/` — financials, roles | `memory/` — bot history (customizable) |
+| `setup/` — integration guides | `_master/` — sync scripts (bootstrap) |
+| `scripts/` — utility scripts | `manifest.json` — version info |
+
+### For AIM (Internal)
+
 ```bash
-# Via GitHub UI: Click "Fork" button
-# Or via CLI:
-gh repo fork aim-master-brain-template --clone
+# Generate a new client key
+python _master/scripts/encrypt_brain.py --generate-key
+
+# Encrypt premium content before pushing
+python _master/scripts/encrypt_brain.py --key <KEY>
+
+# Test decryption
+python _master/scripts/encrypt_brain.py --decrypt --key <KEY> --out /tmp/test
 ```
 
-### 2. Customize Your Brain
-- Update `config/vision.md` with your company info
-- Replace `brand/` assets with your logos and colors
-- Modify `playbooks/` to match your sales process
-- Configure `setup/api-connections.md` with your API keys
+## Quick Start for Clients
 
-### 3. Connect to Your Bot
+### 1. Get Your BRAIN_KEY
+Contact your AIM implementation partner to receive your license key.
+
+### 2. Set Up Environment
+```bash
+export BRAIN_REPO="alex-giglietti/Master-Brain-Template"
+export BRAIN_BRANCH="main"
+export BRAIN_KEY="your-key-from-aim"
+export GITHUB_TOKEN="ghp_..."  # if repo is private
+```
+
+### 3. Run First Sync
+```bash
+python3 ~/.openclaw/workspace/_master/scripts/brain_sync.py
+```
+
+### 4. Customize Your Protected Folders
+- Update `brand/` with your brand voice and assets
+- Update `vision/` with your company mission
+- Configure `USER.md` with your personal info
+
+### 5. Connect to Your Bot
 See [SETUP-GUIDE.md](SETUP-GUIDE.md) for detailed integration instructions.
 
 ## How Bots Use This Brain
