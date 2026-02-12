@@ -38,10 +38,8 @@ temp/
 
 # Decrypted content (never commit plaintext of encrypted dirs)
 # These are stored as .brain archives in encrypted/ instead
-# Uncomment these after running encrypt_brain.py to prevent
-# accidentally committing plaintext versions:
-# /playbooks/
-# /config/
-# /execution/
-# /setup/
-# /scripts/
+/playbooks/
+/config/
+/execution/
+/setup/
+/scripts/

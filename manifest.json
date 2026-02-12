@@ -1,17 +1,30 @@
 {
   "version": "1.1.0",
   "name": "AIM Master Brain",
-  "description": "AI Implementation Mastermind — Master Brain Template for OpenClaw",
+  "description": "AI Implementation Mastermind \u2014 Master Brain Template for OpenClaw",
   "author": "AIM",
-  "changelog": "Added brain encryption system — premium content now requires BRAIN_KEY",
-  "protected_dirs": ["memory", "brand", "vision"],
-  "protected_files": ["USER.md", "IDENTITY.md"],
-  "encrypted_dirs": ["playbooks", "config", "execution", "setup", "scripts"],
+  "changelog": "Added brain encryption system \u2014 premium content now requires BRAIN_KEY",
+  "protected_dirs": [
+    "memory",
+    "brand",
+    "vision"
+  ],
+  "protected_files": [
+    "USER.md",
+    "IDENTITY.md"
+  ],
+  "encrypted_dirs": [
+    "playbooks",
+    "config",
+    "execution",
+    "setup",
+    "scripts"
+  ],
   "encryption": {
     "algorithm": "AES-256-CBC",
     "kdf": "PBKDF2",
     "kdf_iterations": 100000,
-    "format": "tar.gz → AES-256-CBC",
+    "format": "tar.gz \u2192 AES-256-CBC",
     "tool": "openssl"
   },
   "update_url": "https://github.com/alex-giglietti/Master-Brain-Template",
