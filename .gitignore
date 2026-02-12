@@ -15,7 +15,6 @@ venv/
 *.egg-info/
 
 # Cache
-/memory/
 *.cache
 .cache/
 
@@ -36,10 +35,5 @@ Thumbs.db
 tmp/
 temp/
 
-# Decrypted content (never commit plaintext of encrypted dirs)
-# These are stored as .brain archives in encrypted/ instead
-/playbooks/
-/config/
-/execution/
-/setup/
-/scripts/
+# Local-only (not tracked)
+/memory/

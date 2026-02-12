@@ -1,34 +1,34 @@
 ---
 name: brain-sync
-description: "Auto-sync the Master Brain from GitHub. Checks for updates and applies them while protecting user-customized folders (memory, brand, vision)."
+description: "Pull the Master Brain from GitHub. Clones on first run, pulls updates on subsequent runs. Read-only — no push access."
 metadata:
   openclaw:
     emoji: "🧠"
     requires:
-      bins: ["git", "python3"]
+      bins: ["git"]
 ---
 
 # Brain Sync Skill
 
-Keeps the OpenClaw workspace in sync with the AIM Master Brain GitHub repo.
+Pulls the AIM Master Brain into the local OpenClaw workspace.
 
 ## What It Does
 
-1. Checks if a new brain version is available on GitHub
-2. Downloads and applies updates to the workspace
-3. **Protects** user-customized folders (`memory/`, `brand/`, `vision/`) — NEVER overwritten after first install
-4. Updates everything else (playbooks, config, execution, setup, scripts)
+1. **First run:** Clones the brain repo to `~/.openclaw/brain`
+2. **Subsequent runs:** Pulls latest updates from GitHub
+3. Local customizations (`brand/`, `vision/`, `memory/`) are never overwritten
 
-## Manual Sync
-
-```bash
-python3 {baseDir}/../../scripts/brain_sync.py --workspace ~/.openclaw/workspace
-```
-
-## Check for Updates
+## Pull the Brain
 
 ```bash
-python3 {baseDir}/../../scripts/brain_sync.py --check
+BRAIN_DIR=~/.openclaw/brain
+BRAIN_REPO="https://github.com/alex-giglietti/Master-Brain-Template.git"
+
+if [ -d "$BRAIN_DIR/.git" ]; then
+  cd "$BRAIN_DIR" && git pull origin main
+else
+  git clone "$BRAIN_REPO" "$BRAIN_DIR"
+fi
 ```
 
 ## On Bot Startup (BOOT.md)
@@ -36,7 +36,7 @@ python3 {baseDir}/../../scripts/brain_sync.py --check
 Add to BOOT.md:
 
 ```
-- [ ] Run brain sync: `python3 ~/.openclaw/workspace/_master/scripts/brain_sync.py`
+- [ ] Pull the brain: sync from GitHub
 ```
 
 ## Via Heartbeat
@@ -44,29 +44,18 @@ Add to BOOT.md:
 Add to HEARTBEAT.md:
 
 ```
-- [ ] If more than 24h since last brain sync, run: `python3 ~/.openclaw/workspace/_master/scripts/brain_sync.py`
+- [ ] If more than 24h since last brain pull, sync from GitHub
 ```
 
-## Protected vs Updated
+## What Gets Updated
 
-| Folder | First Install | Updates |
-|---|---|---|
-| `memory/` | Seeded | Never touched |
-| `brand/` | Seeded | Never touched |
-| `vision/` | Seeded | Never touched |
-| `USER.md` | Seeded | Never touched |
-| `IDENTITY.md` | Seeded | Never touched |
-| `playbooks/` | Installed | Always updated |
-| `config/` | Installed | Always updated |
-| `execution/` | Installed | Always updated |
-| `setup/` | Installed | Always updated |
-| `_master/` | Installed | Always updated |
-
-## Environment Variables
-
-| Variable | Description | Default |
-|---|---|---|
-| `BRAIN_REPO` | GitHub repo (user/repo) | Set in script |
-| `BRAIN_BRANCH` | Branch to sync | `main` |
-| `GITHUB_TOKEN` | Token for private repos | None |
-| `OPENCLAW_WORKSPACE` | Workspace path | `~/.openclaw/workspace` |
+| Folder | On Pull |
+|---|---|
+| `playbooks/` | Updated |
+| `config/` | Updated |
+| `execution/` | Updated |
+| `setup/` | Updated |
+| `scripts/` | Updated |
+| `brand/` | Not tracked in repo — local only |
+| `vision/` | Not tracked in repo — local only |
+| `memory/` | Not tracked in repo — local only |

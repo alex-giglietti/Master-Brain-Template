@@ -1,136 +1,98 @@
-# AIM Master Brain Template
+# AIM Master Brain
 
-> **A centralized knowledge base system for AI-powered business automation bots**
+> **A centralized knowledge base for AI-powered business automation bots**
 
 ## What is the Master Brain?
 
-The Master Brain is a GitHub-based knowledge repository that serves as the central "brain" for AI bots (specifically OpenClaw instances). It contains all the business logic, brand guidelines, operational procedures, and strategic playbooks that power intelligent automation agents.
+The Master Brain is a GitHub repository that serves as the central "brain" for your OpenClaw AI bot. It contains all the business logic, brand guidelines, operational procedures, and strategic playbooks that power your intelligent automation agents.
 
-### Why GitHub Instead of Google Drive?
+### Why GitHub?
 
-1. **Version Control** - Track every change, roll back mistakes, see what improved performance
-2. **Easy API Access** - Bots can fetch knowledge via simple HTTP requests
-3. **Fork-able Templates** - Clients get their own copy without touching the original
-4. **Collaborative** - Multiple team members can update safely with pull requests
-5. **Always Available** - No authentication issues or permission problems for bots
+1. **Version Control** — Track every change, roll back mistakes, see what improved performance
+2. **Easy API Access** — Bots can fetch knowledge via simple HTTP requests
+3. **Always Available** — No authentication issues or permission problems for bots
+4. **Simple Updates** — When AIM pushes improvements, your bot pulls them with one command
+
+## For Clients: Getting the Brain
+
+Your OpenClaw bot pulls the brain directly. No keys, no tokens, no setup beyond a single command.
+
+### Pull the Brain
+
+```bash
+git clone https://github.com/alex-giglietti/Master-Brain-Template.git ~/.openclaw/brain
+```
+
+That's it. Your bot now has the full brain locally.
+
+### Get Updates
+
+```bash
+cd ~/.openclaw/brain && git pull origin main
+```
+
+Or tell your OpenClaw bot: **"Pull the brain"** — it knows what to do.
+
+### What You Can Customize
+
+After cloning, these folders are yours to edit locally:
+
+- `brand/` — Your brand voice, logos, and guidelines
+- `vision/` — Your company mission and goals
+- `memory/` — Bot conversation history (local-only, not in repo)
+
+These are never overwritten when you pull updates because they're your local files.
 
 ## Repository Structure
 
-### `/config/` - Core Business Configuration
-- `vision.md` - Company overview, mission, values, and strategic direction
-- `offers.md` - Product/service catalog with pricing and positioning
-- `tech-stack.md` - Technology infrastructure and integrations
+### `/config/` — Core Business Configuration
+- `vision.md` — Company overview, mission, values, and strategic direction
+- `offers.md` — Product/service catalog with pricing and positioning
+- `tech-stack.md` — Technology infrastructure and integrations
 
-### `/brand/` - Brand Identity & Assets
-- `brand.md` - Brand guidelines, voice, tone, messaging framework
-- `social-bios.md` - Pre-written bios for all social platforms
-- `assets/` - Logos, favicons, business cards, banners (all visual brand elements)
+### `/brand/` — Brand Identity & Assets
+- `brand.md` — Brand guidelines, voice, tone, messaging framework
+- `social-bios.md` — Pre-written bios for all social platforms
+- `assets/` — Logos, favicons, business cards, banners
 
-### `/playbooks/` - Customer Journey Automation
+### `/playbooks/` — Customer Journey Automation
 Organized by funnel stage:
-- `attract/` - Lead generation, outreach, first contact procedures
-- `convert/` - Sales qualification, objection handling, closing strategies
-- `nurture/` - Follow-up sequences, relationship building, retention
-- `deliver/` - Onboarding, service delivery, customer success protocols
+- `attract/` — Lead generation, outreach, first contact procedures
+- `convert/` — Sales qualification, objection handling, closing strategies
+- `nurture/` — Follow-up sequences, relationship building, retention
+- `deliver/` — Onboarding, service delivery, customer success protocols
 
-### `/execution/` - Operations & Management
-- `roles.md` - Team roles, responsibilities, and reporting structure
-- `project-management.md` - Project workflows, milestone tracking, sprint planning
-- `financials.md` - Budgets, pricing calculations, revenue tracking
-- `reporting.md` - KPIs, dashboards, and reporting procedures
+### `/execution/` — Operations & Management
+- `roles.md` — Team roles, responsibilities, and reporting structure
+- `project-management.md` — Project workflows, milestone tracking, sprint planning
+- `financials.md` — Budgets, pricing calculations, revenue tracking
+- `reporting.md` — KPIs, dashboards, and reporting procedures
 
-### `/setup/` - Technical Integration Guides
-Step-by-step setup instructions for:
-- `openclaw.md` - OpenClaw bot deployment and configuration
-- `telegram.md` - Telegram bot integration
-- `google-workspace.md` - Google Workspace automation
-- `ghl.md` - GoHighLevel CRM setup
-- `zapier.md` - Zapier workflow connections
-- `api-connections.md` - API credentials and webhook configurations
+### `/setup/` — Technical Integration Guides
+- `openclaw.md` — OpenClaw bot deployment and configuration
+- `telegram.md` — Telegram bot integration
+- `google-workspace.md` — Google Workspace automation
+- `ghl.md` — GoHighLevel CRM setup
+- `zapier.md` — Zapier workflow connections
+- `api-connections.md` — API credentials and webhook configurations
 
-### `/memory/` - Dynamic Conversation History
-- Real-time storage for bot conversations and learned preferences
-- Not committed to git (in .gitignore) - stored in separate database
-- Can be synced back to GitHub for analysis/backup
+### `/scripts/` — Utility Scripts
+- `brain_loader.py` — Load brain content into bots
+- `sync-from-drive.py` — Google Drive sync tool
+- `validate-brain.py` — Content validation
 
-## Content Protection
-
-Premium brain content (playbooks, SOPs, config, integration guides) is **encrypted at rest** in this repository. Only licensed clients with a valid `BRAIN_KEY` can decrypt and use this content.
-
-### How It Works
-
-1. **AIM encrypts** premium directories into `.brain` archives (AES-256-CBC) before pushing to GitHub
-2. **GitHub stores** only encrypted blobs — plaintext IP never touches the repo
-3. **Clients sync** using `brain_sync.py`, which automatically decrypts with their `BRAIN_KEY`
-4. **No key = no content** — the sync script will refuse to proceed without a valid key
-
-### What's Encrypted vs Open
-
-| Encrypted (requires BRAIN_KEY) | Open (always readable) |
-|---|---|
-| `playbooks/` — sales scripts & SOPs | `brand/` — client's brand (customizable) |
-| `config/` — offers, tech stack | `vision/` — client's vision (customizable) |
-| `execution/` — financials, roles | `memory/` — bot history (customizable) |
-| `setup/` — integration guides | `_master/` — sync scripts (bootstrap) |
-| `scripts/` — utility scripts | `manifest.json` — version info |
-
-### For AIM (Internal)
-
-```bash
-# Generate a new client key
-python _master/scripts/encrypt_brain.py --generate-key
-
-# Encrypt premium content before pushing
-python _master/scripts/encrypt_brain.py --key <KEY>
-
-# Test decryption
-python _master/scripts/encrypt_brain.py --decrypt --key <KEY> --out /tmp/test
-```
-
-## Quick Start for Clients
-
-### 1. Get Your BRAIN_KEY
-Contact your AIM implementation partner to receive your license key.
-
-### 2. Set Up Environment
-```bash
-export BRAIN_REPO="alex-giglietti/Master-Brain-Template"
-export BRAIN_BRANCH="main"
-export BRAIN_KEY="your-key-from-aim"
-export GITHUB_TOKEN="ghp_..."  # if repo is private
-```
-
-### 3. Run First Sync
-```bash
-python3 ~/.openclaw/workspace/_master/scripts/brain_sync.py
-```
-
-### 4. Customize Your Protected Folders
-- Update `brand/` with your brand voice and assets
-- Update `vision/` with your company mission
-- Configure `USER.md` with your personal info
-
-### 5. Connect to Your Bot
-See [SETUP-GUIDE.md](SETUP-GUIDE.md) for detailed integration instructions.
+### `/memory/` — Dynamic Conversation History
+- Local-only storage for bot conversations and learned preferences
+- Not tracked in git — each bot instance maintains its own
 
 ## How Bots Use This Brain
 
-Your OpenClaw bot (or any AI agent) reads from this repository in real-time:
+Your OpenClaw bot reads from its local clone:
 
 ```python
-import requests
-
-# Fetch a playbook
-def get_playbook(repo_url, playbook_path):
-    url = f"{repo_url}/main/{playbook_path}"
-    response = requests.get(url)
-    return response.text
-
-# Example: Load sales objection handling
-objections = get_playbook(
-    "https://raw.githubusercontent.com/yourname/your-brain",
-    "playbooks/convert/objection-handling.md"
-)
+# Bot reads playbook from local brain
+with open("~/.openclaw/brain/playbooks/convert/README.md") as f:
+    sales_playbook = f.read()
 ```
 
 The bot uses this knowledge to:
@@ -138,47 +100,43 @@ The bot uses this knowledge to:
 - Follow your specific sales scripts
 - Apply your brand voice consistently
 - Execute procedures exactly as documented
-- Make decisions based on your strategic guidelines
 
-## Keeping Your Brain Updated
+## Keeping the Brain Updated
 
 ### For Done-For-You Clients
-Your AI implementation partner maintains your brain. They update playbooks based on performance data and evolving strategies.
+Your AI implementation partner maintains the brain. They push improvements based on performance data and evolving strategies. Your bot picks them up on next pull.
 
 ### For Done-With-You Clients
-You can update files directly:
-1. Edit markdown files in GitHub web interface or locally
-2. Commit changes with descriptive messages
-3. Bot automatically pulls latest version within 5 minutes
+You can suggest changes by contacting your AIM partner. The repo is read-only for clients to ensure consistency.
 
-### Version Control Best Practices
-- Use clear commit messages: "Updated lead qualification criteria"
-- Test changes in a staging bot before production
-- Create branches for major rewrites
-- Tag releases for rollback capability
+### Auto-Sync on Bot Startup
+
+Add to your OpenClaw BOOT.md:
+
+```
+- [ ] Pull latest brain: `cd ~/.openclaw/brain && git pull origin main`
+```
+
+Or set up a cron job:
+
+```bash
+# Pull brain updates every hour
+0 * * * * cd ~/.openclaw/brain && git pull origin main >> ~/.openclaw/brain_sync.log 2>&1
+```
 
 ## Advanced Features
 
-### A/B Testing Playbooks
-Create branches to test different approaches:
-```bash
-git checkout -b test-aggressive-sales-script
-# Edit playbooks/convert/sales-script.md
-git commit -m "Testing more aggressive close"
-```
-Point one bot instance to `main` branch, another to `test-aggressive-sales-script`, compare results.
-
 ### Multi-Bot Architecture
 Different bots can read different sections:
-- **Sales Bot** - Reads only `/playbooks/convert/`
-- **Support Bot** - Reads only `/playbooks/deliver/`
-- **Marketing Bot** - Reads only `/playbooks/attract/`
+- **Sales Bot** — Reads `/playbooks/convert/`
+- **Support Bot** — Reads `/playbooks/deliver/`
+- **Marketing Bot** — Reads `/playbooks/attract/`
 
 All sharing the same `/brand/` and `/config/` for consistency.
 
 ### RAG Integration
 Use this repository as your vector store source:
-1. Clone the repo
+1. Clone the brain
 2. Chunk all markdown files
 3. Generate embeddings
 4. Store in Pinecone/Qdrant/Weaviate
@@ -186,15 +144,8 @@ Use this repository as your vector store source:
 
 ## Support
 
-For implementation help:
 - **Technical Issues**: Open an issue in this repository
 - **Strategic Guidance**: Contact your AI implementation partner
-- **Documentation**: See [SETUP-GUIDE.md](SETUP-GUIDE.md)
-
-## License
-
-Proprietary - Licensed to [CLIENT NAME]
-Unauthorized copying or distribution prohibited.
 
 ---
 
