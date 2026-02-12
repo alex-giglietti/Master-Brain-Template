@@ -20,14 +20,16 @@ Pulls the AIM Master Brain into the local OpenClaw workspace.
 
 ## Pull the Brain
 
+If the brain is already cloned, just pull. If not, the client's clone URL (with access token) is stored in the git remote after first clone.
+
 ```bash
 BRAIN_DIR=~/.openclaw/brain
-BRAIN_REPO="https://github.com/alex-giglietti/Master-Brain-Template.git"
 
 if [ -d "$BRAIN_DIR/.git" ]; then
   cd "$BRAIN_DIR" && git pull origin main
 else
-  git clone "$BRAIN_REPO" "$BRAIN_DIR"
+  echo "Brain not found. Run the clone command provided by your AIM partner first."
+  echo "Example: git clone https://<TOKEN>@github.com/alex-giglietti/Master-Brain-Template.git ~/.openclaw/brain"
 fi
 ```
 

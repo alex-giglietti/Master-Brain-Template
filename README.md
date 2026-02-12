@@ -15,13 +15,15 @@ The Master Brain is a GitHub repository that serves as the central "brain" for y
 
 ## For Clients: Getting the Brain
 
-Your OpenClaw bot pulls the brain directly. No keys, no tokens, no setup beyond a single command.
+Your AIM partner will give you a one-line clone command with access built in. Just run it.
 
 ### Pull the Brain
 
 ```bash
-git clone https://github.com/alex-giglietti/Master-Brain-Template.git ~/.openclaw/brain
+git clone https://<ACCESS_TOKEN>@github.com/alex-giglietti/Master-Brain-Template.git ~/.openclaw/brain
 ```
+
+> **Note:** Replace `<ACCESS_TOKEN>` with the token provided by your AIM partner. You only need it once — git remembers it after cloning.
 
 That's it. Your bot now has the full brain locally.
 

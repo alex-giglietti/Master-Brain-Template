@@ -2,7 +2,7 @@
 
 ## What This Does
 
-Your AI bot's "brain" lives in a GitHub repository. Your OpenClaw instance clones it directly onto its own machine for fast, local access. No keys, no tokens, no accounts needed.
+Your AI bot's "brain" lives in a private GitHub repository. Your AIM partner provides a one-line command that clones it directly onto your machine for fast, local access. No GitHub account needed.
 
 - **First time:** Clone the brain — gets everything instantly
 - **Updates:** Pull to get the latest playbooks, SOPs, and configs
@@ -10,17 +10,15 @@ Your AI bot's "brain" lives in a GitHub repository. Your OpenClaw instance clone
 
 ## Step 1: Pull the Brain
 
-Tell your OpenClaw bot:
-
-> "Pull the brain"
-
-Or run manually:
+Your AIM partner will send you a clone command. It looks like this:
 
 ```bash
-git clone https://github.com/alex-giglietti/Master-Brain-Template.git ~/.openclaw/brain
+git clone https://<ACCESS_TOKEN>@github.com/alex-giglietti/Master-Brain-Template.git ~/.openclaw/brain
 ```
 
-Done. The entire brain is now on your machine.
+Just paste it into your terminal. Done — the entire brain is now on your machine.
+
+Or tell your OpenClaw bot: **"Pull the brain"** and paste the clone URL when prompted.
 
 ## Step 2: Get Updates
 
@@ -75,7 +73,8 @@ Add to your BOOT.md:
 
 | Problem | Fix |
 |---|---|
-| `git clone` failed | Check internet connection, verify the repo URL |
+| `git clone` failed | Check internet connection and that the clone URL includes the access token |
+| `Authentication failed` | Your access token may have expired — contact AIM for a new clone URL |
 | `git pull` has conflicts | You edited a file AIM also updated — run `git checkout -- <file>` to accept AIM's version, or merge manually |
 | Bot not using brain content | Check `ls ~/.openclaw/brain/`, restart the bot |
 | Want to reset everything | Delete and re-clone: `rm -rf ~/.openclaw/brain && git clone ...` |
