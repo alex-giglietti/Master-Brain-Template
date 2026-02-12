@@ -1,0 +1,18 @@
+{
+  "version": "2.0.0",
+  "name": "AIM Master Brain",
+  "description": "AI Implementation Mastermind — Master Brain Template for OpenClaw",
+  "author": "AIM",
+  "changelog": "Simplified to pull-only model — all content is plaintext, no encryption needed",
+  "protected_dirs": [
+    "memory",
+    "brand",
+    "vision"
+  ],
+  "protected_files": [
+    "USER.md",
+    "IDENTITY.md"
+  ],
+  "update_url": "https://github.com/alex-giglietti/Master-Brain-Template",
+  "notes": "Clients clone this repo read-only. Protected dirs are customized locally and never overwritten."
+}
