@@ -1,37 +1,40 @@
-# Environment variables
-.env
-.env.local
+# ═══ ADMIN SECRETS (never commit) ═══
+admin/keys.json
 
-# Google Drive API credentials
-credentials.json
-token.pickle
+# ═══ CLIENT SECRETS (never commit) ═══
+.client-key
+.client-name
+.decrypted
 
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-.venv/
-venv/
-*.egg-info/
+# ═══ SOURCE FILES (admin local only) ═══
+.source/
 
-# Cache
-/memory/
-*.cache
-.cache/
+# ═══ DECRYPTED CONTENT (generated locally by decrypt.sh) ═══
+# These are the .md files produced from .enc files — don't commit them
+AGENTS.md
+playbooks/**/*.md
+execution/*.md
+factory/*.md
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
+# Keep templates and client-owned files
+!brand/*.md
+!vision/*.md
+!custom-playbooks/*.md
+!custom-playbooks/README.md
+!START-HERE.md
+!README.md
+!SKILL.md
 
-# OS
+# ═══ CLIENT-OWNED (never overwritten by updates) ═══
+# These are tracked as templates in the repo but
+# client modifications are preserved during updates.
+# memory/ contents are gitignored since they're per-client
+memory/*.md
+!memory/.gitkeep
+
+# ═══ OS / misc ═══
 .DS_Store
 Thumbs.db
-
-# Logs
-*.log
-
-# Temporary files
-tmp/
-temp/
+node_modules/
+*.pyc
+/tmp/
