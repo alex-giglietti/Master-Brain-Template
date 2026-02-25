@@ -24,8 +24,13 @@ chmod 600 "$BRAIN_DIR/.client-name"
 echo "$PERSONAL_KEY" > "$BRAIN_DIR/.client-key"
 chmod 600 "$BRAIN_DIR/.client-key"
 
-# Clear cached keyfile so decrypt fetches fresh
+# Clear cached keyfile and stale decrypted files so decrypt starts fresh
 rm -f "$BRAIN_DIR/.cached-keyfile"
+find "$BRAIN_DIR" -name "*.enc" -type f \
+    -not -path "*/client-keys/*" \
+    -not -path "*/.git/*" | while IFS= read -r enc_file; do
+    rm -f "${enc_file%.enc}"
+done
 
 echo -e "\033[0;32m[OK]\033[0m Key saved for $CLIENT_NAME. Decrypting..."
 bash "$BRAIN_DIR/scripts/decrypt.sh"
