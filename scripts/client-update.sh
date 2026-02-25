@@ -29,6 +29,7 @@ for dir in brand vision memory custom-playbooks; do
 done
 cp "$BRAIN_DIR/.client-key" "$BACKUP/.client-key" 2>/dev/null || true
 cp "$BRAIN_DIR/.client-name" "$BACKUP/.client-name" 2>/dev/null || true
+cp "$BRAIN_DIR/.cached-keyfile" "$BACKUP/.cached-keyfile" 2>/dev/null || true
 
 # Pull
 if git pull --ff-only origin main 2>/dev/null; then
@@ -48,11 +49,28 @@ for dir in brand vision memory custom-playbooks; do
 done
 cp "$BACKUP/.client-key" "$BRAIN_DIR/.client-key" 2>/dev/null || true
 cp "$BACKUP/.client-name" "$BRAIN_DIR/.client-name" 2>/dev/null || true
+cp "$BACKUP/.cached-keyfile" "$BRAIN_DIR/.cached-keyfile" 2>/dev/null || true
 rm -rf "$BACKUP"
 
 # Decrypt new content
 info "Decrypting..."
 bash "$BRAIN_DIR/scripts/decrypt.sh"
+
+# Set up sparse checkout if not configured (one-time migration)
+if ! git config --get core.sparseCheckout &>/dev/null || [ "$(git config --get core.sparseCheckout)" != "true" ]; then
+    info "Setting up sparse checkout (one-time migration)..."
+    git sparse-checkout init --no-cone 2>/dev/null || git config core.sparseCheckout true
+    if ! git sparse-checkout set '/*' '!/admin/' '!/client-keys/' 2>/dev/null; then
+        mkdir -p .git/info
+        cat > .git/info/sparse-checkout << 'SPARSE'
+/*
+!/admin/
+!/client-keys/
+SPARSE
+        git read-tree -mu HEAD
+    fi
+    ok "Future updates will exclude admin tools and other clients' keyfiles."
+fi
 
 # Ensure OpenClaw hook is still wired
 bash "$BRAIN_DIR/scripts/setup-openclaw-hook.sh" 2>/dev/null || true
