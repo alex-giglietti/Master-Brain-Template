@@ -8,6 +8,7 @@
 set -euo pipefail
 
 BRAIN_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+LOCKFILE="$BRAIN_DIR/.update.lock"
 
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -19,8 +20,24 @@ info()  { echo -e "${CYAN}[UPDATE]${NC} $1"; }
 ok()    { echo -e "${GREEN}[UPDATE]${NC} $1"; }
 warn()  { echo -e "${YELLOW}[UPDATE]${NC} $1"; }
 
+# Prevent concurrent updates (cron + manual)
+if [ -f "$LOCKFILE" ]; then
+    LOCK_PID=$(cat "$LOCKFILE" 2>/dev/null)
+    if [ -n "$LOCK_PID" ] && kill -0 "$LOCK_PID" 2>/dev/null; then
+        warn "Another update is running (PID $LOCK_PID). Skipping."
+        exit 0
+    fi
+    rm -f "$LOCKFILE"
+fi
+echo $$ > "$LOCKFILE"
+trap "rm -f '$LOCKFILE'" EXIT
+
 cd "$BRAIN_DIR"
 info "Checking for updates..."
+
+# Detect default branch
+BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/origin/||')
+BRANCH="${BRANCH:-master}"
 
 # Backup client-owned content before any git operations
 BACKUP=$(mktemp -d)
@@ -32,12 +49,12 @@ cp "$BRAIN_DIR/.client-name" "$BACKUP/.client-name" 2>/dev/null || true
 cp "$BRAIN_DIR/.cached-keyfile" "$BACKUP/.cached-keyfile" 2>/dev/null || true
 
 # Pull
-if git pull --ff-only origin main 2>/dev/null; then
+if git pull --ff-only origin "$BRANCH" 2>/dev/null; then
     ok "Updated to latest."
 else
     warn "Fast-forward failed. Resetting to remote..."
-    git fetch origin main
-    git reset --hard origin/main
+    git fetch origin "$BRANCH"
+    git reset --hard "origin/$BRANCH"
 fi
 
 # Restore client-owned content

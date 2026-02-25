@@ -45,12 +45,12 @@ if [ ! -d .git ]; then
     echo -e "${GREEN}[OK]${NC} Git initialized"
 fi
 
-# Set main branch
-git checkout -b main 2>/dev/null || git checkout main 2>/dev/null || true
+# Use master as the default branch (matches all client scripts)
+git checkout -b master 2>/dev/null || git checkout master 2>/dev/null || true
 
 # Ensure secrets aren't committed
 echo -e "${CYAN}[INFO]${NC} Verifying .gitignore protects secrets..."
-for secret in ".client-key" "admin/keys.json" ".source/"; do
+for secret in ".client-key" ".client-name" "admin/keys.json" ".source/" ".cached-keyfile"; do
     if ! grep -q "$secret" .gitignore 2>/dev/null; then
         echo "$secret" >> .gitignore
         echo -e "${YELLOW}[WARN]${NC} Added $secret to .gitignore"
@@ -77,10 +77,10 @@ echo -e "${BOLD}Ready to push!${NC}"
 echo ""
 echo "Add your remote and push:"
 echo "  git remote add origin https://github.com/YOUR_ORG/Master-Brain-Template.git"
-echo "  git push -u origin main"
+echo "  git push -u origin master"
 echo ""
 echo "Or if remote already exists:"
-echo "  git push origin main"
+echo "  git push origin master"
 echo ""
 echo -e "${BOLD}After pushing, clients install with:${NC}"
-echo "  curl -sSL https://raw.githubusercontent.com/YOUR_ORG/Master-Brain-Template/main/scripts/client-install.sh | bash -s -- CLIENT_KEY"
+echo "  curl -sSL https://raw.githubusercontent.com/YOUR_ORG/Master-Brain-Template/master/scripts/client-install.sh | bash -s -- \"Client Name\" CLIENT_KEY"

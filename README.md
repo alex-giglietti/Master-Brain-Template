@@ -54,7 +54,7 @@ git add -A && git commit -m "Initial content + clients" && git push
 
 ```bash
 # One command to install:
-curl -sSL https://raw.githubusercontent.com/alex-giglietti/Master-Brain-Template/main/scripts/client-install.sh | bash -s -- "Your Name" YOUR_PERSONAL_KEY
+curl -sSL https://raw.githubusercontent.com/alex-giglietti/Master-Brain-Template/master/scripts/client-install.sh | bash -s -- "Your Name" YOUR_PERSONAL_KEY
 ```
 
 That's it. Brain is installed, decrypted, and wired into OpenClaw.
