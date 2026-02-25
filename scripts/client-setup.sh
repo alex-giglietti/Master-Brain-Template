@@ -16,12 +16,12 @@ if [ -z "$CLIENT_NAME" ] || [ -z "$PERSONAL_KEY" ]; then
     exit 1
 fi
 
-# Save client name
-echo "$CLIENT_NAME" > "$BRAIN_DIR/.client-name"
+# Save client name (printf avoids trailing newline)
+printf '%s' "$CLIENT_NAME" > "$BRAIN_DIR/.client-name"
 chmod 600 "$BRAIN_DIR/.client-name"
 
 # Save personal key
-echo "$PERSONAL_KEY" > "$BRAIN_DIR/.client-key"
+printf '%s' "$PERSONAL_KEY" > "$BRAIN_DIR/.client-key"
 chmod 600 "$BRAIN_DIR/.client-key"
 
 # Clear cached keyfile and stale decrypted files so decrypt starts fresh

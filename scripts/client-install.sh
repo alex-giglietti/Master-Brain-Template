@@ -3,7 +3,7 @@
 # scripts/client-install.sh — One-line installer for clients
 #
 # Usage:
-#   curl -sSL https://raw.githubusercontent.com/alex-giglietti/Master-Brain-Template/main/scripts/client-install.sh | bash -s -- "Your Name" YOUR_PERSONAL_KEY
+#   curl -sSL https://raw.githubusercontent.com/alex-giglietti/Master-Brain-Template/master/scripts/client-install.sh | bash -s -- "Your Name" YOUR_PERSONAL_KEY
 # =============================================================================
 
 set -euo pipefail
@@ -44,14 +44,23 @@ for cmd in git openssl; do
     }
 done
 
+# Detect default branch name (master or main)
+detect_branch() {
+    local dir="$1"
+    local branch
+    branch=$(cd "$dir" && git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/origin/||')
+    echo "${branch:-master}"
+}
+
 # Clone or pull (sparse checkout excludes admin/ and client-keys/)
 if [ -d "$BRAIN_DIR/.git" ]; then
     info "Brain already installed. Updating..."
     cd "$BRAIN_DIR"
-    git pull --ff-only origin main 2>/dev/null || {
+    BRANCH=$(detect_branch "$BRAIN_DIR")
+    git pull --ff-only origin "$BRANCH" 2>/dev/null || {
         warn "Fast-forward failed. Fetching fresh..."
-        git fetch origin main
-        git reset --hard origin/main
+        git fetch origin "$BRANCH"
+        git reset --hard "origin/$BRANCH"
     }
 else
     info "Installing brain to $BRAIN_DIR..."
@@ -77,10 +86,10 @@ SPARSE
     ok "Cloned (admin and client-keys excluded)."
 fi
 
-# Save client name and personal key
-echo "$CLIENT_NAME" > "$BRAIN_DIR/.client-name"
+# Save client name and personal key (printf avoids trailing newline)
+printf '%s' "$CLIENT_NAME" > "$BRAIN_DIR/.client-name"
 chmod 600 "$BRAIN_DIR/.client-name"
-echo "$PERSONAL_KEY" > "$BRAIN_DIR/.client-key"
+printf '%s' "$PERSONAL_KEY" > "$BRAIN_DIR/.client-key"
 chmod 600 "$BRAIN_DIR/.client-key"
 ok "Credentials saved for $CLIENT_NAME."
 
@@ -93,7 +102,7 @@ info "Wiring into OpenClaw..."
 bash "$BRAIN_DIR/scripts/setup-openclaw-hook.sh" 2>/dev/null || true
 
 # Auto-update cron (daily 4am)
-CRON_CMD="cd $BRAIN_DIR && bash scripts/client-update.sh >> /tmp/brain-update.log 2>&1"
+CRON_CMD="cd '$BRAIN_DIR' && bash scripts/client-update.sh >> /tmp/brain-update.log 2>&1"
 (crontab -l 2>/dev/null | grep -v "brain.*client-update" ; echo "0 4 * * * $CRON_CMD") | crontab - 2>/dev/null || {
     warn "Couldn't set up auto-update cron. Update manually:"
     echo "  cd $BRAIN_DIR && ./scripts/client-update.sh"

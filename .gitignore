@@ -5,6 +5,7 @@ admin/
 .client-key
 .client-name
 .cached-keyfile
+.update.lock
 .decrypted
 
 # ═══ SOURCE FILES (admin local only) ═══
