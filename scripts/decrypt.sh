@@ -47,6 +47,31 @@ if [ -f "$NAME_FILE" ]; then
     CLIENT_NAME=$(cat "$NAME_FILE" | head -1)
 fi
 
+# Migration: if no .client-name exists but local keyfiles do, discover identity
+if [ -z "$CLIENT_NAME" ] && [ -d "$BRAIN_DIR/client-keys" ]; then
+    info "No client name on file. Identifying from local keyfiles..."
+
+    UNWRAP_TMPFILE_DISC=$(mktemp)
+    for keyfile in "$BRAIN_DIR/client-keys"/*.key.enc; do
+        [ -f "$keyfile" ] || continue
+
+        if openssl enc -aes-256-cbc -d -salt -pbkdf2 -iter 100000 \
+            -in "$keyfile" -out "$UNWRAP_TMPFILE_DISC" \
+            -pass "pass:$PERSONAL_KEY" 2>/dev/null; then
+
+            disc_candidate=$(tr -d '[:space:]' < "$UNWRAP_TMPFILE_DISC")
+            if echo "$disc_candidate" | grep -qE '^[a-f0-9]{64}$'; then
+                CLIENT_NAME=$(basename "$keyfile" .key.enc)
+                echo "$CLIENT_NAME" > "$NAME_FILE"
+                chmod 600 "$NAME_FILE"
+                ok "Identified as: $CLIENT_NAME"
+                break
+            fi
+        fi
+    done
+    rm -f "$UNWRAP_TMPFILE_DISC"
+fi
+
 if [ -z "$CLIENT_NAME" ]; then
     err "No client name found. Run: ./scripts/client-setup.sh \"Your Name\" YOUR_KEY"
     exit 1

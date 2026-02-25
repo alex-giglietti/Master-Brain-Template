@@ -56,6 +56,22 @@ rm -rf "$BACKUP"
 info "Decrypting..."
 bash "$BRAIN_DIR/scripts/decrypt.sh"
 
+# Set up sparse checkout if not configured (one-time migration)
+if ! git config --get core.sparseCheckout &>/dev/null || [ "$(git config --get core.sparseCheckout)" != "true" ]; then
+    info "Setting up sparse checkout (one-time migration)..."
+    git sparse-checkout init --no-cone 2>/dev/null || git config core.sparseCheckout true
+    if ! git sparse-checkout set '/*' '!/admin/' '!/client-keys/' 2>/dev/null; then
+        mkdir -p .git/info
+        cat > .git/info/sparse-checkout << 'SPARSE'
+/*
+!/admin/
+!/client-keys/
+SPARSE
+        git read-tree -mu HEAD
+    fi
+    ok "Future updates will exclude admin tools and other clients' keyfiles."
+fi
+
 # Ensure OpenClaw hook is still wired
 bash "$BRAIN_DIR/scripts/setup-openclaw-hook.sh" 2>/dev/null || true
 
