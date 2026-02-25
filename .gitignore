@@ -1,9 +1,10 @@
-# ═══ ADMIN SECRETS (never commit) ═══
-admin/keys.json
+# ═══ ADMIN (never sent to clients) ═══
+admin/
 
 # ═══ CLIENT SECRETS (never commit) ═══
 .client-key
 .client-name
+.cached-keyfile
 .decrypted
 
 # ═══ SOURCE FILES (admin local only) ═══

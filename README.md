@@ -10,24 +10,26 @@ Every piece of premium content (playbooks, execution systems, factory guides, AG
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│  .source/playbooks/...  (your local unencrypted)    │
+│  .source/playbooks/...  (admin local, unencrypted)  │
 │         │                                           │
 │    admin/encrypt.sh  (AES-256 with content key)     │
 │         │                                           │
 │  playbooks/*.enc     (committed to repo)            │
 │         │                                           │
-│  admin/client-keys/                                 │
+│  client-keys/                                       │
 │    ├── alice.key.enc  (content key wrapped w/ her)  │
 │    ├── bob.key.enc    (content key wrapped w/ his)  │
 │    └── charlie.key.enc                              │
 │                                                     │
 │  Client runs decrypt.sh:                            │
-│    personal key → unwrap keyfile → content key       │
-│    content key → decrypt all .enc → readable .md     │
+│    personal key → fetch own keyfile from remote      │
+│    → unwrap → content key → decrypt all .enc → .md   │
 └─────────────────────────────────────────────────────┘
 ```
 
 **Disable a client:** Delete their `.key.enc` file + push. Done. Zero impact on anyone else.
+
+**Client isolation:** Clients never receive admin tools or other clients' keyfiles. The decrypt script fetches only the client's own keyfile from the remote repo.
 
 ---
 
@@ -52,7 +54,7 @@ git add -A && git commit -m "Initial content + clients" && git push
 
 ```bash
 # One command to install:
-curl -sSL https://raw.githubusercontent.com/YOUR_ORG/Master-Brain-Template/main/scripts/client-install.sh | bash -s -- YOUR_PERSONAL_KEY
+curl -sSL https://raw.githubusercontent.com/alex-giglietti/Master-Brain-Template/main/scripts/client-install.sh | bash -s -- "Your Name" YOUR_PERSONAL_KEY
 ```
 
 That's it. Brain is installed, decrypted, and wired into OpenClaw.
@@ -72,7 +74,7 @@ git add -A && git commit -m "Disable alice" && git push
 ./admin/manage-keys.sh enable "alice"
 git add -A && git commit -m "Re-enable alice" && git push
 # Send Alice her new key, she runs:
-#   cd ~/.openclaw/workspace/brain && ./scripts/client-setup.sh NEW_KEY
+#   cd ~/.openclaw/workspace/brain && ./scripts/client-setup.sh "alice" NEW_KEY
 
 # See all clients
 ./admin/manage-keys.sh list
@@ -120,8 +122,9 @@ brain/
 ├── factory/            ← 🔐 ENCRYPTED (tech-stack, API, setup guides)
 ├── AGENTS.md.enc       ← 🔐 ENCRYPTED (master AI instructions)
 │
-├── admin/client-keys/  ← Per-client wrapped keyfiles (committed)
+├── client-keys/        ← Per-client wrapped keyfiles (committed, excluded from client clones)
 ├── scripts/            ← Client install/update/decrypt scripts
+├── admin/              ← ADMIN ONLY (gitignored, never sent to clients)
 ├── START-HERE.md       ← Plain text onboarding guide
 ├── SKILL.md            ← OpenClaw skill manifest
 └── .source/            ← ADMIN ONLY (gitignored, never committed)
@@ -150,5 +153,6 @@ The AI doesn't choose whether to use the brain — it's baked into every session
 | Content encryption | AES-256-CBC + PBKDF2 100K iterations | All playbooks, execution, factory, AGENTS.md |
 | Per-client key wrapping | AES-256-CBC envelope | Each client's keyfile wraps the content key with their unique key |
 | Client isolation | Disable = delete keyfile | No rotation needed, no other clients affected |
+| Remote keyfile fetch | decrypt.sh fetches via git | Clients only access their own keyfile, never other clients' |
 | Client-owned content | Unencrypted, gitignored | brand/, vision/, memory/ never leave client's device |
-| Admin secrets | Gitignored | keys.json + .source/ never committed |
+| Admin tools | Gitignored | admin/ folder (encrypt.sh, manage-keys.sh, keys.json) never sent to clients |

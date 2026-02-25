@@ -3,13 +3,14 @@
 # scripts/client-install.sh — One-line installer for clients
 #
 # Usage:
-#   curl -sSL https://raw.githubusercontent.com/YOUR_ORG/Master-Brain-Template/main/scripts/client-install.sh | bash -s -- YOUR_PERSONAL_KEY
+#   curl -sSL https://raw.githubusercontent.com/alex-giglietti/Master-Brain-Template/main/scripts/client-install.sh | bash -s -- "Your Name" YOUR_PERSONAL_KEY
 # =============================================================================
 
 set -euo pipefail
 
-PERSONAL_KEY="${1:-}"
-REPO_URL="${BRAIN_REPO_URL:-https://github.com/YOUR_ORG/Master-Brain-Template.git}"
+CLIENT_NAME="${1:-}"
+PERSONAL_KEY="${2:-}"
+REPO_URL="${BRAIN_REPO_URL:-https://github.com/alex-giglietti/Master-Brain-Template.git}"
 BRAIN_DIR="${BRAIN_DIR:-$HOME/.openclaw/workspace/brain}"
 
 RED='\033[0;31m'
@@ -29,10 +30,10 @@ echo -e "${BOLD}🧠 AI Brain Installer${NC}"
 echo "═══════════════════════════════════════"
 echo ""
 
-if [ -z "$PERSONAL_KEY" ]; then
-    err "No personal key provided."
-    echo "Usage: $0 YOUR_PERSONAL_KEY"
-    echo "Get your key from your AI Monetizations admin."
+if [ -z "$CLIENT_NAME" ] || [ -z "$PERSONAL_KEY" ]; then
+    err "Missing arguments."
+    echo "Usage: $0 \"Your Name\" YOUR_PERSONAL_KEY"
+    echo "Get your name and key from your AI Monetizations admin."
     exit 1
 fi
 
@@ -43,7 +44,7 @@ for cmd in git openssl; do
     }
 done
 
-# Clone or pull
+# Clone or pull (sparse checkout excludes admin/ and client-keys/)
 if [ -d "$BRAIN_DIR/.git" ]; then
     info "Brain already installed. Updating..."
     cd "$BRAIN_DIR"
@@ -57,12 +58,31 @@ else
     mkdir -p "$(dirname "$BRAIN_DIR")"
     git clone "$REPO_URL" "$BRAIN_DIR"
     cd "$BRAIN_DIR"
+
+    # Enable sparse checkout to exclude admin tools and other clients' keyfiles
+    git sparse-checkout init --no-cone 2>/dev/null || git config core.sparseCheckout true
+    if git sparse-checkout set '/*' '!/admin/' '!/client-keys/' 2>/dev/null; then
+        : # Modern git sparse-checkout worked
+    else
+        # Fallback for older git versions
+        mkdir -p .git/info
+        cat > .git/info/sparse-checkout << 'SPARSE'
+/*
+!/admin/
+!/client-keys/
+SPARSE
+        git read-tree -mu HEAD
+    fi
+
+    ok "Cloned (admin and client-keys excluded)."
 fi
 
-# Save personal key
+# Save client name and personal key
+echo "$CLIENT_NAME" > "$BRAIN_DIR/.client-name"
+chmod 600 "$BRAIN_DIR/.client-name"
 echo "$PERSONAL_KEY" > "$BRAIN_DIR/.client-key"
 chmod 600 "$BRAIN_DIR/.client-key"
-ok "Personal key saved."
+ok "Credentials saved for $CLIENT_NAME."
 
 # Decrypt
 info "Decrypting content with your key..."

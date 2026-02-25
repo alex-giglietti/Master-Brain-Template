@@ -29,6 +29,7 @@ for dir in brand vision memory custom-playbooks; do
 done
 cp "$BRAIN_DIR/.client-key" "$BACKUP/.client-key" 2>/dev/null || true
 cp "$BRAIN_DIR/.client-name" "$BACKUP/.client-name" 2>/dev/null || true
+cp "$BRAIN_DIR/.cached-keyfile" "$BACKUP/.cached-keyfile" 2>/dev/null || true
 
 # Pull
 if git pull --ff-only origin main 2>/dev/null; then
@@ -48,6 +49,7 @@ for dir in brand vision memory custom-playbooks; do
 done
 cp "$BACKUP/.client-key" "$BRAIN_DIR/.client-key" 2>/dev/null || true
 cp "$BACKUP/.client-name" "$BRAIN_DIR/.client-name" 2>/dev/null || true
+cp "$BACKUP/.cached-keyfile" "$BRAIN_DIR/.cached-keyfile" 2>/dev/null || true
 rm -rf "$BACKUP"
 
 # Decrypt new content
