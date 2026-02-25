@@ -7,9 +7,11 @@
 #   2. Read client name from .client-name
 #   3. Fetch their wrapped keyfile from remote (git) or local cache
 #   4. Unwrap (decrypt) the content key using their personal key
-#   5. Use the content key to decrypt all .enc files
+#   5. Verify content key fingerprint against .manifest.json
+#   6. Use the content key to decrypt all .enc files
 #
 # If step 3-4 fail → subscription is disabled → show locked message
+# If step 5 fails → content key mismatch → admin must re-encrypt
 # =============================================================================
 
 set -euo pipefail
@@ -18,11 +20,13 @@ BRAIN_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 KEY_FILE="$BRAIN_DIR/.client-key"
 NAME_FILE="$BRAIN_DIR/.client-name"
 CACHED_KEYFILE="$BRAIN_DIR/.cached-keyfile"
+MANIFEST_FILE="$BRAIN_DIR/.manifest.json"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
+BOLD='\033[1m'
 NC='\033[0m'
 
 info()  { echo -e "${CYAN}[DECRYPT]${NC} $1"; }
@@ -55,7 +59,7 @@ if [ -z "$CLIENT_NAME" ] && [ -d "$BRAIN_DIR/client-keys" ]; then
     for keyfile in "$BRAIN_DIR/client-keys"/*.key.enc; do
         [ -f "$keyfile" ] || continue
 
-        if openssl enc -aes-256-cbc -d -salt -pbkdf2 -iter 100000 \
+        if openssl enc -aes-256-cbc -md sha256 -d -salt -pbkdf2 -iter 100000 \
             -in "$keyfile" -out "$UNWRAP_TMPFILE_DISC" \
             -pass "pass:$PERSONAL_KEY" 2>/dev/null; then
 
@@ -83,24 +87,40 @@ CONTENT_KEY=""
 UNWRAP_TMPFILE=$(mktemp)
 trap "rm -f $UNWRAP_TMPFILE" EXIT
 
-# Attempt to unwrap a keyfile from a given path. Sets CONTENT_KEY on success.
+# Attempt to unwrap a keyfile. Tries -md sha256 first, then without for
+# backward compatibility with keyfiles wrapped before the -md flag was added.
 try_unwrap() {
     local keyfile="$1"
     [ -f "$keyfile" ] || return 1
 
-    if openssl enc -aes-256-cbc -d -salt -pbkdf2 -iter 100000 \
+    local candidate
+
+    # Try with explicit -md sha256 (current standard)
+    if openssl enc -aes-256-cbc -md sha256 -d -salt -pbkdf2 -iter 100000 \
         -in "$keyfile" \
         -out "$UNWRAP_TMPFILE" \
         -pass "pass:$PERSONAL_KEY" 2>/dev/null; then
 
-        # Validate: content key should be 64 hex chars
-        local candidate
         candidate=$(tr -d '[:space:]' < "$UNWRAP_TMPFILE")
         if echo "$candidate" | grep -qE '^[a-f0-9]{64}$'; then
             CONTENT_KEY="$candidate"
             return 0
         fi
     fi
+
+    # Fallback: try without -md flag (backward compat with old keyfiles)
+    if openssl enc -aes-256-cbc -d -salt -pbkdf2 -iter 100000 \
+        -in "$keyfile" \
+        -out "$UNWRAP_TMPFILE" \
+        -pass "pass:$PERSONAL_KEY" 2>/dev/null; then
+
+        candidate=$(tr -d '[:space:]' < "$UNWRAP_TMPFILE")
+        if echo "$candidate" | grep -qE '^[a-f0-9]{64}$'; then
+            CONTENT_KEY="$candidate"
+            return 0
+        fi
+    fi
+
     return 1
 }
 
@@ -174,9 +194,42 @@ LOCKED
     exit 0
 fi
 
-# ─── Step 5: Decrypt all content ─────────────────────────────────────────
+# ─── Step 5: Verify content key fingerprint ──────────────────────────────
 
 ok "Content key unwrapped successfully."
+
+# Check if manifest has a key_fingerprint (set by updated encrypt.sh)
+if [ -f "$MANIFEST_FILE" ] && command -v jq &>/dev/null; then
+    EXPECTED_FP=$(jq -r '.key_fingerprint // empty' "$MANIFEST_FILE" 2>/dev/null)
+    if [ -n "$EXPECTED_FP" ]; then
+        ACTUAL_FP=$(echo -n "$CONTENT_KEY" | openssl dgst -sha256 2>/dev/null | awk '{print $NF}' | cut -c1-16)
+        if [ "$EXPECTED_FP" != "$ACTUAL_FP" ]; then
+            err ""
+            err "CONTENT KEY MISMATCH DETECTED"
+            err ""
+            err "Your keyfile was wrapped with a different content key than"
+            err "what was used to encrypt the content files."
+            err ""
+            err "This usually means the admin ran encrypt.sh and manage-keys.sh"
+            err "with different keys.json files (e.g. on different machines)."
+            err ""
+            err "The admin needs to re-run on a SINGLE machine:"
+            err "  1. ./admin/manage-keys.sh init    (or use existing keys.json)"
+            err "  2. ./admin/encrypt.sh              (re-encrypt content)"
+            err "  3. Re-add all clients with manage-keys.sh add"
+            err "  4. git add -A && git commit && git push"
+            err ""
+            err "Key fingerprint in manifest:  $EXPECTED_FP"
+            err "Key fingerprint from keyfile: $ACTUAL_FP"
+            exit 1
+        fi
+    fi
+fi
+
+# ─── Step 6: Decrypt all content ─────────────────────────────────────────
+
+FAIL_COUNT=0
+SUCCESS_COUNT=0
 
 find "$BRAIN_DIR" -name "*.enc" -type f \
     -not -path "*/client-keys/*" \
@@ -189,14 +242,48 @@ find "$BRAIN_DIR" -name "*.enc" -type f \
         continue
     fi
 
-    if openssl enc -aes-256-cbc -d -salt -pbkdf2 -iter 100000 \
+    # Try with -md sha256 first (current standard), then without (backward compat)
+    if openssl enc -aes-256-cbc -md sha256 -d -salt -pbkdf2 -iter 100000 \
         -in "$enc_file" -out "$dec_file" \
         -pass "pass:$CONTENT_KEY" 2>/dev/null; then
         ok "${dec_file#$BRAIN_DIR/}"
+    elif openssl enc -aes-256-cbc -d -salt -pbkdf2 -iter 100000 \
+        -in "$enc_file" -out "$dec_file" \
+        -pass "pass:$CONTENT_KEY" 2>/dev/null; then
+        ok "${dec_file#$BRAIN_DIR/} (legacy)"
     else
         warn "FAILED: ${enc_file#$BRAIN_DIR/}"
+        FAIL_COUNT=$((FAIL_COUNT + 1))
     fi
 done
 
 echo ""
-ok "Decryption complete."
+
+# If ALL files failed, this is almost certainly a key mismatch
+TOTAL_ENC=$(find "$BRAIN_DIR" -name "*.enc" -type f \
+    -not -path "*/client-keys/*" \
+    -not -path "*/.git/*" | wc -l | tr -d ' ')
+
+TOTAL_DEC=$(find "$BRAIN_DIR" -name "*.enc" -type f \
+    -not -path "*/client-keys/*" \
+    -not -path "*/.git/*" -exec sh -c '
+        dec="${1%.enc}"
+        [ -f "$dec" ] && [ "$dec" -nt "$1" ] && echo ok
+    ' _ {} \; | wc -l | tr -d ' ')
+
+if [ "$TOTAL_DEC" -eq 0 ] && [ "$TOTAL_ENC" -gt 0 ]; then
+    err ""
+    err "ALL $TOTAL_ENC files failed to decrypt."
+    err ""
+    err "Your keyfile unwrapped successfully, but the content key does not"
+    err "match the encrypted files. This is a key mismatch on the admin side."
+    err ""
+    err "ADMIN: Re-encrypt content and re-wrap keyfiles from the SAME keys.json."
+    err "  1. Ensure admin/keys.json has the correct content_key"
+    err "  2. Run: ./admin/encrypt.sh"
+    err "  3. Re-add clients: ./admin/manage-keys.sh add <name> <email>"
+    err "  4. Commit and push"
+    exit 1
+else
+    ok "Decryption complete. ($TOTAL_DEC/$TOTAL_ENC files)"
+fi
