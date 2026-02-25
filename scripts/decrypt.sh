@@ -108,8 +108,10 @@ FETCHED_KEYFILE=$(mktemp)
 trap "rm -f $UNWRAP_TMPFILE $FETCHED_KEYFILE" EXIT
 
 # Try fetching the client's keyfile from the remote repo via git
+REMOTE_REACHABLE=false
 info "Fetching your keyfile..."
 if cd "$BRAIN_DIR" && git fetch origin main --quiet 2>/dev/null; then
+    REMOTE_REACHABLE=true
     if git show "origin/main:client-keys/${CLIENT_NAME}.key.enc" > "$FETCHED_KEYFILE" 2>/dev/null; then
         if try_unwrap "$FETCHED_KEYFILE"; then
             # Cache the keyfile for offline use
@@ -119,13 +121,15 @@ if cd "$BRAIN_DIR" && git fetch origin main --quiet 2>/dev/null; then
         fi
     else
         warn "Keyfile not found on remote — subscription may be disabled."
+        # Remote is reachable but keyfile is missing: delete cache to enforce lockout
+        rm -f "$CACHED_KEYFILE"
     fi
 else
     warn "Could not reach remote. Trying cached keyfile..."
 fi
 
-# Fall back to cached keyfile if remote fetch didn't work
-if [ -z "$CONTENT_KEY" ] && [ -f "$CACHED_KEYFILE" ]; then
+# Fall back to cached keyfile only if remote was unreachable
+if [ -z "$CONTENT_KEY" ] && [ "$REMOTE_REACHABLE" = false ] && [ -f "$CACHED_KEYFILE" ]; then
     if try_unwrap "$CACHED_KEYFILE"; then
         ok "Using cached keyfile (offline mode)."
     fi
