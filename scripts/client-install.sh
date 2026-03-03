@@ -3,15 +3,19 @@
 # scripts/client-install.sh — One-line installer for clients
 #
 # Usage:
-#   curl -sSL https://raw.githubusercontent.com/alex-giglietti/Master-Brain-Template/master/scripts/client-install.sh | bash -s -- "Your Name" YOUR_PERSONAL_KEY
+#   curl -sSL https://raw.githubusercontent.com/alex-giglietti/Master-Brain-Template/master/scripts/client-install.sh | bash -s -- "Your Name" YOUR_PERSONAL_KEY [CUSTOMER_ID]
+#
+# If CUSTOMER_ID is not provided, one is derived from the first 12 chars of the personal key.
 # =============================================================================
 
 set -euo pipefail
 
 CLIENT_NAME="${1:-}"
 PERSONAL_KEY="${2:-}"
+CUSTOMER_ID="${3:-}"
 REPO_URL="${BRAIN_REPO_URL:-https://github.com/alex-giglietti/Master-Brain-Template.git}"
 BRAIN_DIR="${BRAIN_DIR:-$HOME/.openclaw/workspace/brain}"
+OPENCLAW_HOME="${OPENCLAW_HOME:-$HOME/.openclaw}"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -93,11 +97,29 @@ printf '%s' "$PERSONAL_KEY" > "$BRAIN_DIR/.client-key"
 chmod 600 "$BRAIN_DIR/.client-key"
 ok "Credentials saved for $CLIENT_NAME."
 
+# Set up .brain-config/ with customer_id (for key server fallback)
+mkdir -p "$BRAIN_DIR/.brain-config"
+if [ -z "$CUSTOMER_ID" ]; then
+    # Derive customer_id from first 12 chars of personal key
+    CUSTOMER_ID=$(printf '%s' "$PERSONAL_KEY" | cut -c1-12)
+fi
+printf '%s' "$CUSTOMER_ID" > "$BRAIN_DIR/.brain-config/.customer-id"
+chmod 600 "$BRAIN_DIR/.brain-config/.customer-id"
+ok "Customer ID stored: $CUSTOMER_ID"
+
 # Decrypt
 info "Decrypting content with your key..."
 bash "$BRAIN_DIR/scripts/decrypt.sh"
 
-# Set up OpenClaw integration
+# Install OpenClaw decrypt-brain hook
+HOOKS_DIR="$OPENCLAW_HOME/hooks/decrypt-brain"
+if [ -d "$BRAIN_DIR/hooks/decrypt-brain" ]; then
+    mkdir -p "$HOOKS_DIR"
+    cp -r "$BRAIN_DIR/hooks/decrypt-brain/"* "$HOOKS_DIR/"
+    ok "Installed decrypt-brain hook to $HOOKS_DIR"
+fi
+
+# Set up OpenClaw integration (symlinks, SKILL.md, BOOT.md)
 info "Wiring into OpenClaw..."
 bash "$BRAIN_DIR/scripts/setup-openclaw-hook.sh" 2>/dev/null || true
 
@@ -120,4 +142,6 @@ echo -e "  ${BOLD}Next steps:${NC}"
 echo "  1. Fill out brand/ and vision/ with your business info"
 echo "  2. Read START-HERE.md for the full guide"
 echo "  3. Talk to your AI — it's ready!"
+echo ""
+echo -e "  ${BOLD}Uninstall:${NC} bash $BRAIN_DIR/scripts/uninstall.sh"
 echo ""

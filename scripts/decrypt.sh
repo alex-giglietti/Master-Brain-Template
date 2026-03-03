@@ -2,15 +2,18 @@
 # =============================================================================
 # scripts/decrypt.sh — Decrypt content using per-client envelope encryption
 #
-# FLOW:
-#   1. Read client's personal key from .client-key
-#   2. Read client name from .client-name (or discover via migration)
-#   3. Fetch their wrapped keyfile from remote (git) or local cache
-#   4. Unwrap (decrypt) the content key using their personal key
+# KEY RESOLUTION ORDER:
+#   0. Dev key:       .brain-config/.dev-key (local testing, skips all other steps)
+#   1. Personal key:  .client-key + .client-name
+#   2. Envelope:      Fetch wrapped keyfile from git remote → cached → local
+#   3. Unwrap:        Decrypt content key using personal key
+#   4. Key server:    .brain-config/.customer-id → keys.multiplyinc.com (fallback)
+#
+# Then:
 #   5. Verify content key fingerprint against .manifest.json
 #   6. Use the content key to decrypt all .enc files
 #
-# If step 3-4 fail → subscription is disabled → show locked message
+# If all key resolution fails → subscription disabled → show locked message
 # If step 5 fails → content key mismatch → admin must re-encrypt
 # =============================================================================
 
@@ -21,6 +24,9 @@ KEY_FILE="$BRAIN_DIR/.client-key"
 NAME_FILE="$BRAIN_DIR/.client-name"
 CACHED_KEYFILE="$BRAIN_DIR/.cached-keyfile"
 MANIFEST_FILE="$BRAIN_DIR/.manifest.json"
+DEV_KEY_FILE="$BRAIN_DIR/.brain-config/.dev-key"
+CUSTOMER_ID_FILE="$BRAIN_DIR/.brain-config/.customer-id"
+KEY_SERVER_BASE="https://keys.multiplyinc.com/api/keys"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -41,19 +47,35 @@ FETCHED_KEYFILE=$(mktemp)
 PASS_TMPFILE=$(mktemp)
 trap "rm -f '$UNWRAP_TMPFILE' '$FETCHED_KEYFILE' '$PASS_TMPFILE'" EXIT
 
+# ─── Step 0: Check for dev key (local testing shortcut) ──────────────────
+
+if [ -f "$DEV_KEY_FILE" ]; then
+    DEV_KEY=$(tr -d '[:space:]' < "$DEV_KEY_FILE")
+    if echo "$DEV_KEY" | grep -qE '^[a-f0-9]{64}$'; then
+        ok "Using dev key from .brain-config/.dev-key"
+        CONTENT_KEY="$DEV_KEY"
+        # Skip all key resolution — jump straight to decryption
+    else
+        warn ".dev-key exists but doesn't contain a valid 64-char hex key. Ignoring."
+    fi
+fi
+
 # ─── Step 1: Load personal key ───────────────────────────────────────────
 
-if [ ! -f "$KEY_FILE" ]; then
+if [ -z "${CONTENT_KEY:-}" ] && [ ! -f "$KEY_FILE" ]; then
     err "No personal key found. Run: ./scripts/client-setup.sh \"Your Name\" YOUR_KEY"
     exit 1
 fi
 
-PERSONAL_KEY=$(tr -d '[:space:]' < "$KEY_FILE")
-[ -z "$PERSONAL_KEY" ] && { err "Key file is empty."; exit 1; }
+PERSONAL_KEY=""
+if [ -z "${CONTENT_KEY:-}" ] && [ -f "$KEY_FILE" ]; then
+    PERSONAL_KEY=$(tr -d '[:space:]' < "$KEY_FILE")
+    [ -z "$PERSONAL_KEY" ] && { err "Key file is empty."; exit 1; }
 
-# Write key to temp file so openssl can read via -pass file: (avoids ps exposure)
-printf '%s' "$PERSONAL_KEY" > "$PASS_TMPFILE"
-chmod 600 "$PASS_TMPFILE"
+    # Write key to temp file so openssl can read via -pass file: (avoids ps exposure)
+    printf '%s' "$PERSONAL_KEY" > "$PASS_TMPFILE"
+    chmod 600 "$PASS_TMPFILE"
+fi
 
 # ─── Step 2: Load client name ────────────────────────────────────────────
 
@@ -64,7 +86,8 @@ fi
 
 # Migration: if no .client-name exists but local keyfiles do, discover identity.
 # Also sets CONTENT_KEY directly to avoid a redundant re-unwrap.
-if [ -z "$CLIENT_NAME" ] && [ -d "$BRAIN_DIR/client-keys" ]; then
+# (Skip if content key already resolved via dev key or key server)
+if [ -z "${CONTENT_KEY:-}" ] && [ -z "$CLIENT_NAME" ] && [ -n "$PERSONAL_KEY" ] && [ -d "$BRAIN_DIR/client-keys" ]; then
     info "No client name on file. Identifying from local keyfiles..."
 
     for keyfile in "$BRAIN_DIR/client-keys"/*.key.enc; do
@@ -90,7 +113,8 @@ if [ -z "$CLIENT_NAME" ] && [ -d "$BRAIN_DIR/client-keys" ]; then
     done
 fi
 
-if [ -z "$CLIENT_NAME" ]; then
+# Client name is required for envelope key resolution, but not for dev-key or key-server paths
+if [ -z "${CONTENT_KEY:-}" ] && [ -z "$CLIENT_NAME" ]; then
     err "No client name found. Run: ./scripts/client-setup.sh \"Your Name\" YOUR_KEY"
     exit 1
 fi
@@ -172,6 +196,31 @@ if [ -z "$CONTENT_KEY" ] && [ -d "$BRAIN_DIR/client-keys" ]; then
     local_keyfile="$BRAIN_DIR/client-keys/${CLIENT_NAME}.key.enc"
     if try_unwrap "$local_keyfile"; then
         ok "Using local keyfile."
+    fi
+fi
+
+# Fall back to remote key server (keys.multiplyinc.com)
+if [ -z "$CONTENT_KEY" ] && [ -f "$CUSTOMER_ID_FILE" ]; then
+    CUSTOMER_ID=$(tr -d '[:space:]' < "$CUSTOMER_ID_FILE")
+    if [ -n "$CUSTOMER_ID" ]; then
+        info "Trying key server..."
+        KEY_SERVER_URL="${KEY_SERVER_BASE}/${CUSTOMER_ID}"
+        SERVER_RESPONSE=$(curl -sS --max-time 5 "$KEY_SERVER_URL" 2>/dev/null) || SERVER_RESPONSE=""
+        if [ -n "$SERVER_RESPONSE" ]; then
+            # Try to extract key from JSON response ({"key": "..."} or {"content_key": "..."})
+            if command -v jq &>/dev/null; then
+                SERVER_KEY=$(echo "$SERVER_RESPONSE" | jq -r '.key // .content_key // empty' 2>/dev/null | tr -d '[:space:]')
+            else
+                # Fallback: try raw response as hex key
+                SERVER_KEY=$(echo "$SERVER_RESPONSE" | tr -d '[:space:]"{}:keycontnt_')
+            fi
+            # If jq extraction failed, try raw response
+            [ -z "$SERVER_KEY" ] && SERVER_KEY=$(echo "$SERVER_RESPONSE" | tr -d '[:space:]')
+            if echo "$SERVER_KEY" | grep -qE '^[a-f0-9]{64}$'; then
+                CONTENT_KEY="$SERVER_KEY"
+                ok "Key retrieved from server."
+            fi
+        fi
     fi
 fi
 
