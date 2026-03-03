@@ -89,6 +89,15 @@ SPARSE
     ok "Future updates will exclude admin tools and other clients' keyfiles."
 fi
 
+# Update decrypt-brain hook if present in repo
+OPENCLAW_HOME="${OPENCLAW_HOME:-$HOME/.openclaw}"
+HOOKS_DIR="$OPENCLAW_HOME/hooks/decrypt-brain"
+if [ -d "$BRAIN_DIR/hooks/decrypt-brain" ]; then
+    mkdir -p "$HOOKS_DIR"
+    cp -r "$BRAIN_DIR/hooks/decrypt-brain/"* "$HOOKS_DIR/"
+    ok "Updated decrypt-brain hook."
+fi
+
 # Ensure OpenClaw hook is still wired
 bash "$BRAIN_DIR/scripts/setup-openclaw-hook.sh" 2>/dev/null || true
 

@@ -3,15 +3,17 @@
 # scripts/client-install.sh — One-line installer for clients
 #
 # Usage:
-#   curl -sSL https://raw.githubusercontent.com/alex-giglietti/Master-Brain-Template/master/scripts/client-install.sh | bash -s -- "Your Name" YOUR_PERSONAL_KEY
+#   curl -sSL https://raw.githubusercontent.com/alex-giglietti/Master-Brain-Template/master/scripts/client-install.sh | bash -s -- YOUR_PERSONAL_KEY
+#
+# The client_id is derived automatically from the personal key.
 # =============================================================================
 
 set -euo pipefail
 
-CLIENT_NAME="${1:-}"
-PERSONAL_KEY="${2:-}"
+PERSONAL_KEY="${1:-}"
 REPO_URL="${BRAIN_REPO_URL:-https://github.com/alex-giglietti/Master-Brain-Template.git}"
 BRAIN_DIR="${BRAIN_DIR:-$HOME/.openclaw/workspace/brain}"
+OPENCLAW_HOME="${OPENCLAW_HOME:-$HOME/.openclaw}"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -30,10 +32,16 @@ echo -e "${BOLD}🧠 AI Brain Installer${NC}"
 echo "═══════════════════════════════════════"
 echo ""
 
-if [ -z "$CLIENT_NAME" ] || [ -z "$PERSONAL_KEY" ]; then
-    err "Missing arguments."
-    echo "Usage: $0 \"Your Name\" YOUR_PERSONAL_KEY"
-    echo "Get your name and key from your AI Monetizations admin."
+if [ -z "$PERSONAL_KEY" ]; then
+    err "Missing personal key."
+    echo "Usage: curl -sSL .../client-install.sh | bash -s -- YOUR_PERSONAL_KEY"
+    echo "Get your key from your AI Monetizations admin."
+    exit 1
+fi
+
+# Validate key format (64-char hex)
+if ! echo "$PERSONAL_KEY" | grep -qE '^[a-fA-F0-9]{64}$'; then
+    err "Invalid key format. Key must be a 64-character hex string."
     exit 1
 fi
 
@@ -43,6 +51,9 @@ for cmd in git openssl; do
         exit 1
     }
 done
+
+# Derive client_id from personal key (SHA256 hash, first 12 chars)
+CLIENT_ID=$(printf '%s' "$PERSONAL_KEY" | openssl dgst -sha256 2>/dev/null | awk '{print $NF}' | cut -c1-12)
 
 # Detect default branch name (master or main)
 detect_branch() {
@@ -68,7 +79,7 @@ else
     git clone "$REPO_URL" "$BRAIN_DIR"
     cd "$BRAIN_DIR"
 
-    # Enable sparse checkout to exclude admin tools and other clients' keyfiles
+    # Enable sparse checkout to exclude admin tools and client keyfiles
     git sparse-checkout init --no-cone 2>/dev/null || git config core.sparseCheckout true
     if git sparse-checkout set '/*' '!/admin/' '!/client-keys/' 2>/dev/null; then
         : # Modern git sparse-checkout worked
@@ -86,18 +97,29 @@ SPARSE
     ok "Cloned (admin and client-keys excluded)."
 fi
 
-# Save client name and personal key (printf avoids trailing newline)
-printf '%s' "$CLIENT_NAME" > "$BRAIN_DIR/.client-name"
-chmod 600 "$BRAIN_DIR/.client-name"
+# Save personal key
 printf '%s' "$PERSONAL_KEY" > "$BRAIN_DIR/.client-key"
 chmod 600 "$BRAIN_DIR/.client-key"
-ok "Credentials saved for $CLIENT_NAME."
+
+# Save client_id
+mkdir -p "$BRAIN_DIR/.brain-config"
+printf '%s' "$CLIENT_ID" > "$BRAIN_DIR/.brain-config/.customer-id"
+chmod 600 "$BRAIN_DIR/.brain-config/.customer-id"
+ok "Key saved. Client ID: $CLIENT_ID"
 
 # Decrypt
 info "Decrypting content with your key..."
 bash "$BRAIN_DIR/scripts/decrypt.sh"
 
-# Set up OpenClaw integration
+# Install OpenClaw decrypt-brain hook
+HOOKS_DIR="$OPENCLAW_HOME/hooks/decrypt-brain"
+if [ -d "$BRAIN_DIR/hooks/decrypt-brain" ]; then
+    mkdir -p "$HOOKS_DIR"
+    cp -r "$BRAIN_DIR/hooks/decrypt-brain/"* "$HOOKS_DIR/"
+    ok "Installed decrypt-brain hook to $HOOKS_DIR"
+fi
+
+# Set up OpenClaw integration (symlinks, SKILL.md, BOOT.md)
 info "Wiring into OpenClaw..."
 bash "$BRAIN_DIR/scripts/setup-openclaw-hook.sh" 2>/dev/null || true
 
@@ -120,4 +142,6 @@ echo -e "  ${BOLD}Next steps:${NC}"
 echo "  1. Fill out brand/ and vision/ with your business info"
 echo "  2. Read START-HERE.md for the full guide"
 echo "  3. Talk to your AI — it's ready!"
+echo ""
+echo -e "  ${BOLD}Uninstall:${NC} bash $BRAIN_DIR/scripts/uninstall.sh"
 echo ""
